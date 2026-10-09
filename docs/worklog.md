@@ -58,3 +58,11 @@
 - 交付范围：README、AGENTS、requirements、handoff、worklog；单 Agent 完成文档整理，未改源码/依赖或运行功能。
 - 验证：9 份 Markdown 的本地链接/代码围栏、13 个任务 ID/引用、README 职责边界及文档一致性检查通过，`git diff --check` 通过；完整构建及 DSH 功能测试未执行。本条所在提交和远端同步以实际 Git 检查为准。
 - 下一步：保持 T04/T05 的既有开发主线；每阶段成果写入 Agent 上下文，只将影响插件使用者的信息更新到 README。
+
+## W007 · 2026-10-09 · T13 · 当前项目状态梳理
+
+- 触发：用户要求梳理当前插件项目内容和进度。
+- 工作：重新阅读 AGENTS、README、需求、架构、路线、资料、handoff/worklog、Host/Client 入口、manifest、patch、构建脚本及历史审查快照；执行 `git fetch origin --prune`、Git 对齐检查和工具版本记录。
+- 当前事实：审阅开始时工作区干净；HEAD `a95f64d` 与 `origin/main` 0 ahead / 0 behind。Host/Client `apply` 均为空，尚未安装依赖、生成 lockfile、执行 typecheck/build、安装/加载插件或运行授权/UI/聊天测试。
+- 环境记录：当前 shell 的 Node.js 为 `v24.15.0`、pnpm 为 `11.7.0`，`dsh` 不在 PATH；项目文档中的 DSH `0.2.0-rc.2` / Cordis `4.0.4` / React `18.3.1` 是静态审查基线，非本轮运行时连接验证。
+- 影响：没有修改运行代码或产品决策；下一主线仍是 T04（官方授权/账号状态与 UI 契约 live 能力发现）和可独立推进的 T05（版本对齐、依赖/TSX/样式构建准备）。本条更新 handoff/worklog 以满足跨设备接力；未提交、未推送。

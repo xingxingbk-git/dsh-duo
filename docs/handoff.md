@@ -12,7 +12,8 @@
 
 - 仓库：`git@github.com:xingxingbk-git/dsh-duo.git`；主分支：`main`。
 - 当前阶段：官方能力审计、方案修订和项目骨架。尚未进入功能实现，Host/Client 的 `apply` 都是空函数。
-- 本轮目标：将 README 恢复为插件介绍/使用说明，明确 Agent 目标、计划、任务和记忆通过 AGENTS 及其引用文档维护；没有实现新插件功能。
+- 本轮状态梳理（2026-10-09 17:24 CST）：已按 AGENTS 阅读项目入口、需求/架构/路线/资料、handoff/worklog、源码骨架和历史审查快照；`git fetch origin --prune` 后本地 `main` 与 `origin/main` 为 0 ahead / 0 behind，审阅开始时工作区干净，HEAD 为 `a95f64d`。本轮没有实现新插件功能、安装依赖或运行完整构建。
+- 当前设备工具记录：Node.js `v24.15.0`、pnpm `11.7.0`；`dsh` 不在当前 shell PATH。目标静态基线仍是 DSH `0.2.0-rc.2` / Cordis `4.0.4` / React `18.3.1`，不是本次 runtime 实测。
 - 已验证同步基线：`0c86b04617871f20b7172e1bb5f4f5e8f8684f47`（全项目上下文机制提交），此前本地 HEAD 与远端 main 一致。本轮开工 `git fetch origin` 后相对 origin/main 为 0 ahead / 0 behind。此哈希是历史基线，不是本文件将来所在提交的固定哈希；接力以 `git log -1`、fetch 和实际远端检查为准。
 - 没有安装依赖、改动现有运行代码、读取用户凭据或修改 DSH 安装包。
 
