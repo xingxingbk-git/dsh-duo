@@ -1,49 +1,31 @@
 # dsh-duo
 
-**dsh-duo** 是一个 DeepSeek Harness（DSH）插件项目：为现有 Harness 工作区增加 `CHAT | HARNESS` 模式切换。项目按 DSH 的 Cordis bundle + browser client plugin 结构搭建；当前是待构建验证的骨架，模式 UI、授权联动、聊天会话和账号历史同步尚未实现。
+**dsh-duo** 是 DeepSeek Harness（DSH）的模式切换插件，目标是在同一应用中提供 `CHAT | HARNESS` 两种体验：普通聊天与原有 Agent 工作区。
 
-仓库：[xingxingbk-git/dsh-duo](https://github.com/xingxingbk-git/dsh-duo)。当前方案、进展与接力入口见 [AGENTS.md](AGENTS.md) 和 [docs/handoff.md](docs/handoff.md)。
+当前版本处于早期开发阶段，模式切换、账号授权联动及聊天功能尚未实现，也尚未完成构建和安装验证。
 
-## 全项目上下文与多 Agent 接力
+## 功能设计
 
-`AGENTS.md` 是共享入口，`docs/handoff.md` 保存当前总目标、全部任务/依赖/分工、成果、验证、问题与下一步，`docs/worklog.md` 保留决策理由和关键工作历史。需求、架构、路线和资料来源分别维护详细内容，通过链接引用，不依赖某个聊天或某台设备的记忆。
+- **CHAT**：接近 DeepSeek 网页聊天的体验，提供对话导航与聊天主区，隐藏 Harness 专属右侧栏。
+- **HARNESS**：保留 DSH 原有 Agent 功能；从 CHAT 返回时恢复此前的工作区和面板状态。
+- **模式选择器**：保留 DeepSeek 图标，在品牌区域提供 `CHAT | HARNESS` 切换，白底表示当前选项。
 
-所有有实质影响的工作都要回写，包括调研、分析、设计、实现、测试、失败尝试、任务拆分与发布；不限于登录规则。开工读上下文并登记任务，过程中更新关键变化，结束/交接前同步快照和工作记录。推送后其他设备通过 fetch/拉取取得更新；正在运行的聊天和未提交文件不会自动同步。
+以上为插件的功能设计，当前尚未提供可运行实现。
 
-## 已确认的登录规则
+## 登录要求
 
-- 未登录或未获得有效 DeepSeek 账号授权：保持 HARNESS，整个切换控件置灰、禁用，HARNESS 原功能可继续使用。
-- CHAT 中退出登录或官方确认授权失效：立即恢复 HARNESS 和此前工作区/面板，再禁用切换控件；不等待用户确认。
-- 启动时授权未确认：默认 HARNESS 并禁用控件。首次确认/重新授权有效后启用控件，由用户主动进入 CHAT；同账号持续有效的状态刷新不改变当前模式。
-- 不提供匿名 CHAT，不做匿名聊天登录合并，也不通过本地缓存或其它 API key 绕过账号门槛。
+- 未登录或未获得有效 DeepSeek 账号授权：保持 HARNESS，整个切换控件置灰禁用，HARNESS 原功能仍可使用。
+- CHAT 中退出登录或授权失效：立即返回 HARNESS，再禁用切换控件。
+- 首次登录或重新授权成功：启用切换控件，由用户主动进入 CHAT。
+- 不提供匿名 CHAT；API key 或其它模型配置不能替代 DeepSeek 账号登录授权。
 
-这是已经确认的产品规则，尚未实现。官方登录状态读取、订阅和撤销接口仍待核查；普通断网不能直接当作退出登录。有效账号授权也不代表网页对话历史接口已开放。
+有效账号授权不代表网页对话历史可同步。网页历史同步尚未获得官方接口支持证据，当前不支持。
 
-## 项目结构
+## 构建与安装
 
-```text
-.
-├── package.json           # dsh.bundle + dsh.client manifest
-├── cordis.patch.yml       # 将 Host 插件插入 profile 的插件树
-├── tsconfig.json
-├── scripts/build.mjs      # Host TS + DSH lazy-CJS browser bundle
-├── src/
-│   ├── index.ts           # Cordis Host 半插件入口
-│   └── client.ts          # Web Client 半插件入口
-├── docs/
-│   ├── requirements.md    # 需求与验收标准
-│   ├── architecture.md    # 已确认扩展点、架构和风险
-│   ├── roadmap.md         # 开发阶段
-│   ├── references.md      # 官方资料与调研记录
-│   ├── handoff.md         # 当前状态、验证结果与下一步接力
-│   ├── worklog.md         # 决策理由、关键尝试与阶段历史
-│   └── review-2026-10-09.md # 历史审查快照
-└── AGENTS.md              # Codex / Agent 协作指南
-```
+需要 Node.js、pnpm 和与目标 DSH 版本匹配的依赖。当前参考版本为 DSH **0.2.0-rc.2**，实际兼容性尚未验证。
 
-## 构建
-
-需要 Node.js / pnpm，以及与目标 DSH 版本兼容的 `@deepseek-ai/*` 包。已核对的安装目标为 **DSH 0.2.0-rc.2 / Cordis 4.0.4 / React 18.3.1**；不同设备必须重新核对版本。当前依赖仍使用 `*`、没有锁文件，首次完整构建前应先对齐依赖和 React/TSX 构建配置。
+源码构建命令：
 
 ```bash
 pnpm install
@@ -51,39 +33,12 @@ pnpm typecheck
 pnpm build
 ```
 
-预期构建输出 `lib/index.js`（Host plugin）及 `lib/client.js`（DSH 浏览器模块表使用的 lazy-CJS factory）。以上完整流程尚未执行；当前只通过构建脚本语法及 JSON 检查。安装/加载需按目标版本的[官方插件教程](https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish)使用独立开发 profile，桌面 GUI 路径仍待验证。
+预期输出为 `lib/index.js` 和 `lib/client.js`。上述完整构建流程及 DSH 加载尚未验证；安装方式参见 [DSH 官方插件安装文档](https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish)。
 
-## 当前能力状态
+## 数据与权限
 
-- [x] DSH package manifest、bundle patch、Host 与 Client 双入口的项目结构。
-- [x] 项目创建阶段的 Inspect 记录，以及 0.2.0-rc.2 官方源码/安装产物静态审查。
-- [x] 产品决策及全项目上下文同步规范已写入文档，包含任务总表、分工、证据和工作历史。
-- [ ] `CHAT | HARNESS` 切换控件与可逆模式状态。
-- [ ] 官方授权状态读取/订阅、控件禁用及退出自动回退。
-- [ ] Chat 导航、对话主面板和 Harness 右侧面板恢复。
-- [ ] 授权门槛下的真实聊天数据源；mock 仅用于开发验证。
-- [ ] DeepSeek 网页账号历史同步：仅在存在官方支持的第三方授权/API 后评估，不承诺抓取或私有接口方案。
+插件设计仅使用 DSH 官方扩展点，不修改 DSH 安装包，不自行读取或保存密码、浏览器 Cookie 和访问令牌。账号授权仅使用官方明确支持的机制。
 
-## 需求与协作文档
+聊天数据来源、缓存位置和保存策略尚未确定；当前没有实现聊天数据处理，也不会自动合并本地缓存与网页账号历史。
 
-- [需求与验收标准](docs/requirements.md)
-- [架构与可行性](docs/architecture.md)
-- [开发路线](docs/roadmap.md)
-- [官方资料与参考](docs/references.md)
-- [Codex / Agent 指南](AGENTS.md)
-- [当前状态与接力记录](docs/handoff.md)
-- [决策与工作历史](docs/worklog.md)
-
-## 在另一台设备接力
-
-```bash
-git clone git@github.com:xingxingbk-git/dsh-duo.git
-cd dsh-duo
-git status
-```
-
-先读 `AGENTS.md`、`docs/handoff.md` 和 `docs/worklog.md` 近期记录，再读需求、架构与路线；核对本机 DSH 版本与 Inspect 工具，不依赖前一台设备的聊天记录或临时文件。已有 checkout 先 fetch，工作区干净时再快进更新。根据任务总表登记本轮任务与文件范围，每个阶段同步成果、任务状态及上下文，通过正常提交/推送传递。并行 Agent 由协调者整合共享记录，避免同时覆盖同一文件。
-
-## 数据与安全原则
-
-不读取浏览器 Cookie、不保存用户密码/令牌、不调用未公开的网页版接口，也不把本地对话误称为 DeepSeek 网页账号历史。详见 [需求规格](docs/requirements.md) 和 [架构说明](docs/architecture.md)。
+源码仓库：[xingxingbk-git/dsh-duo](https://github.com/xingxingbk-git/dsh-duo)。
