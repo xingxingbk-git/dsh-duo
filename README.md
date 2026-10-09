@@ -4,6 +4,12 @@
 
 仓库：[xingxingbk-git/dsh-duo](https://github.com/xingxingbk-git/dsh-duo)。当前方案、进展与接力入口见 [AGENTS.md](AGENTS.md) 和 [docs/handoff.md](docs/handoff.md)。
 
+## 全项目上下文与多 Agent 接力
+
+`AGENTS.md` 是共享入口，`docs/handoff.md` 保存当前总目标、全部任务/依赖/分工、成果、验证、问题与下一步，`docs/worklog.md` 保留决策理由和关键工作历史。需求、架构、路线和资料来源分别维护详细内容，通过链接引用，不依赖某个聊天或某台设备的记忆。
+
+所有有实质影响的工作都要回写，包括调研、分析、设计、实现、测试、失败尝试、任务拆分与发布；不限于登录规则。开工读上下文并登记任务，过程中更新关键变化，结束/交接前同步快照和工作记录。推送后其他设备通过 fetch/拉取取得更新；正在运行的聊天和未提交文件不会自动同步。
+
 ## 已确认的登录规则
 
 - 未登录或未获得有效 DeepSeek 账号授权：保持 HARNESS，整个切换控件置灰、禁用，HARNESS 原功能可继续使用。
@@ -30,6 +36,7 @@
 │   ├── roadmap.md         # 开发阶段
 │   ├── references.md      # 官方资料与调研记录
 │   ├── handoff.md         # 当前状态、验证结果与下一步接力
+│   ├── worklog.md         # 决策理由、关键尝试与阶段历史
 │   └── review-2026-10-09.md # 历史审查快照
 └── AGENTS.md              # Codex / Agent 协作指南
 ```
@@ -50,7 +57,7 @@ pnpm build
 
 - [x] DSH package manifest、bundle patch、Host 与 Client 双入口的项目结构。
 - [x] 项目创建阶段的 Inspect 记录，以及 0.2.0-rc.2 官方源码/安装产物静态审查。
-- [x] 登录授权门槛、退出自动回退及跨设备接力规范已写入文档。
+- [x] 产品决策及全项目上下文同步规范已写入文档，包含任务总表、分工、证据和工作历史。
 - [ ] `CHAT | HARNESS` 切换控件与可逆模式状态。
 - [ ] 官方授权状态读取/订阅、控件禁用及退出自动回退。
 - [ ] Chat 导航、对话主面板和 Harness 右侧面板恢复。
@@ -65,6 +72,7 @@ pnpm build
 - [官方资料与参考](docs/references.md)
 - [Codex / Agent 指南](AGENTS.md)
 - [当前状态与接力记录](docs/handoff.md)
+- [决策与工作历史](docs/worklog.md)
 
 ## 在另一台设备接力
 
@@ -74,7 +82,7 @@ cd dsh-duo
 git status
 ```
 
-先读 `AGENTS.md` 和 `docs/handoff.md`，再读需求、架构与路线；核对本机 DSH 版本与 Inspect 工具，不依赖前一台设备的聊天记录或临时文件。已有 checkout 先 fetch，工作区干净时再快进更新。每个阶段同步实现、需求及接力记录，并通过正常提交/推送传递成果。
+先读 `AGENTS.md`、`docs/handoff.md` 和 `docs/worklog.md` 近期记录，再读需求、架构与路线；核对本机 DSH 版本与 Inspect 工具，不依赖前一台设备的聊天记录或临时文件。已有 checkout 先 fetch，工作区干净时再快进更新。根据任务总表登记本轮任务与文件范围，每个阶段同步成果、任务状态及上下文，通过正常提交/推送传递。并行 Agent 由协调者整合共享记录，避免同时覆盖同一文件。
 
 ## 数据与安全原则
 
