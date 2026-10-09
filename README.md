@@ -1,44 +1,54 @@
 # dsh-duo
 
-**dsh-duo** 是 DeepSeek Harness（DSH）的模式切换插件，目标是在同一应用中提供 `CHAT | HARNESS` 两种体验：普通聊天与原有 Agent 工作区。
+**dsh-duo** 在 DeepSeek Harness（DSH）桌面版中提供 `CHAT | HARNESS` 切换。CHAT 的主区加载真实的 [DeepSeek Chat 官网](https://chat.deepseek.com/)，由官网处理网页登录、聊天和网页账号历史；HARNESS 保留原 DSH 工作区。
 
-当前版本处于早期开发阶段，模式切换、账号授权联动及聊天功能尚未实现，也尚未完成构建和安装验证。
+当前是针对 **DSH 0.2.0-rc.2** 的网页嵌入候选版。已具备源码、锁定构建与自动化测试；真实桌面网页登录、消息发送和另一浏览器中的历史一致性尚未验收。
 
-## 功能设计
+## 使用方式
 
-- **CHAT**：接近 DeepSeek 网页聊天的体验，提供对话导航与聊天主区，隐藏 Harness 专属右侧栏。
-- **HARNESS**：保留 DSH 原有 Agent 功能；从 CHAT 返回时恢复此前的工作区和面板状态。
-- **模式选择器**：保留 DeepSeek 图标，在品牌区域提供 `CHAT | HARNESS` 切换，白底表示当前选项。
+1. 在 Harness 原账号入口完成 DeepSeek 账号授权。授权尚未确认时，整个切换控件禁用。
+2. 授权确认后手动选择 CHAT，再在真实官网网页中登录你的网页账号。两处登录独立，不会自动转移登录凭据。
+3. 网页内的新建、聊天和历史全部使用官网自身功能。网页数据由官网存储，插件不维护另一份聊天记录。
+4. 手动返回 HARNESS 时保留网页容器，恢复进入前的主面板；再进 CHAT 继续使用同一网页。插件不会主动更改右栏的宽度、标签或全屏状态。
 
-以上为插件的功能设计，当前尚未提供可运行实现。
-
-## 登录要求
-
-- 未登录或未获得有效 DeepSeek 账号授权：保持 HARNESS，整个切换控件置灰禁用，HARNESS 原功能仍可使用。
-- CHAT 中退出登录或授权失效：立即返回 HARNESS，再禁用切换控件。
-- 首次登录或重新授权成功：启用切换控件，由用户主动进入 CHAT。
-- 不提供匿名 CHAT；API key 或其它模型配置不能替代 DeepSeek 账号登录授权。
-
-有效账号授权不代表网页对话历史可同步。网页历史同步尚未获得官方接口支持证据，当前不支持。
+切换入口暂放在可访问的插件控件中，原 Harness 品牌区域保留。CHAT 的模式侧栏和网页工具条也提供返回入口。
 
 ## 构建与安装
 
-需要 Node.js、pnpm 和与目标 DSH 版本匹配的依赖。当前参考版本为 DSH **0.2.0-rc.2**，实际兼容性尚未验证。
-
-源码构建命令：
+开发环境：Node.js 22.19+ 或 24+、pnpm 10.33.2。运行兼容目标：DSH 0.2.0-rc.2 / Cordis 4.0.4 / React 18.3.1；其他版本待验证。
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm typecheck
-pnpm build
+pnpm test
+pnpm package:plugin
 ```
 
-预期输出为 `lib/index.js` 和 `lib/client.js`。上述完整构建流程及 DSH 加载尚未验证；安装方式参见 [DSH 官方插件安装文档](https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish)。
+预构建安装包为 `artifacts/dsh-duo-0.1.0.tgz`。它包含 Host、Client、类型声明和官方 bundle patch。通过 DSH 官方插件管理器安装本地 tarball；CLI 示例（将路径替换为你的实际文件）：
 
-## 数据与权限
+```bash
+dsh plugin --profile desktop add /absolute/path/dsh-duo-0.1.0.tgz --ignore-scripts
+```
 
-插件设计仅使用 DSH 官方扩展点，不修改 DSH 安装包，不自行读取或保存密码、浏览器 Cookie 和访问令牌。账号授权仅使用官方明确支持的机制。
+若使用其他 profile，替换 `desktop`。安装后按 DSH 提示重新加载。卸载可通过原插件管理界面，或：
 
-聊天数据来源、缓存位置和保存策略尚未确定；当前没有实现聊天数据处理，也不会自动合并本地缓存与网页账号历史。
+```bash
+dsh plugin --profile desktop remove dsh-duo
+```
 
-源码仓库：[xingxingbk-git/dsh-duo](https://github.com/xingxingbk-git/dsh-duo)。
+完整安装规则参见 [DSH 官方插件安装文档](https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish)。候选版在独立 Web profile 可检查打包和 Host 加载；Web profile 没有 Desktop Browser 桥，CHAT 会明确保持禁用。
+
+## 当前限制
+
+- 这是 DSH 外层框架内的真实网页，网页内部界面仍由 DeepSeek 官网绘制。使用 DSH 原生组件重绘官网历史尚无官方公开接口依据。
+- DSH 授权和网页登录互相独立，插件不能确认两处是否为同一账号。DSH 官方确认退出/授权失效会回 Harness；网页内部退出登录没有公开通知，无法实现对应的自动回 Harness。
+- DSH 官方 Browser 分区只保留当前应用进程，不共享 Safari/Chrome 登录。重启 DSH 后需重新网页登录；该网页账号已有服务器历史由官网恢复。
+- 手动模式切换保留网页；插件卸载、DSH 授权失效或账号代次变化会销毁容器。未发送草稿和网页在途生成无法由插件提取、备份或调用官网停止接口。
+- 原 Harness 新建快捷键/菜单保留原行为，可能创建新的 Harness 会话并退出 CHAT；此路径不保证原 Session 保真。
+- 原生 Browser 安全策略会限制下载、设备权限及部分弹窗；网页登录、验证码、上传等须实测。普通 Web 浏览器版暂不开放 iframe 回退。
+
+## 权限与数据流
+
+插件通过官方公开接口读取不含凭据的 DSH 授权状态和账号标识。网页使用 DSH 官方批准的隔离 Browser guest：不读密码/Cookie/token，不注入网页脚本，不抓私有接口，不关闭网页安全策略，不修改 DSH 安装包。
+
+插件没有独立模型发送或本地聊天存储功能；不会把 DSH API 生成的对话冒充官网历史，也不自动合并账号数据。网页里的数据处理遵循官网自身行为。

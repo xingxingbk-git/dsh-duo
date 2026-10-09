@@ -1,5 +1,8 @@
 node_modules/
 lib/
+artifacts/
+output/playwright/
+.playwright-cli/
 *.tsbuildinfo
 .DS_Store
 

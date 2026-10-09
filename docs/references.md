@@ -4,6 +4,8 @@
 
 ## 当前验证基线（2026-10-09）
 
+本轮新增实现依据：用户要求实际官网数据，采用 Desktop Browser 嵌入候选路线，详情见 architecture/requirements。旧创建阶段摘要及历史模型 API 资料不构成独立本地聊天的数据源许可。
+
 - 本次 macOS 安装包：DSH **0.2.0-rc.2**，Cordis **4.0.4**，浏览器共享 React **18.3.1**；UI renderer/layout/sidebar/conversation 包 **0.2.0-rc.2**。这是安装产物证据，不是对所有设备的版本承诺。
 - 官方 tag：`dsh-v0.2.0-rc.2`；commit：`639ed015397290b3745d163aafe02ffee4aa3f84`。不同版本先重新核查契约。
 - 官方入门、打包、Client Modules、Slots、Web Client、Sidebar/Layout/右栏正文已读取；初始环境曾只获得检索摘要，不再代表当前文档读取状态。
@@ -75,3 +77,16 @@
 - [dsh-plugin.org](https://dsh-plugin.org/tutorials/develop-plugin-guide) — 第三方教程。
 
 第三方资料仅用于定位线索；遇到冲突以 DSH 官方文档、当前 package contracts 和 Inspect 结果为准。
+
+## 本轮固定公开契约证据（2026-10-09）
+
+全部链接固定 commit `639ed015397290b3745d163aafe02ffee4aa3f84`，本轮无 live Inspect。对应源码路径和行号在 architecture 中列出；无需安装提取文件才能接力。
+
+- [安全账号 getState/getProfile/watch](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account/src/index.ts)；[credential-stored 与资料类型](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account/src/types.ts)。ready 且 stable profile ID 才确认门槛；不读取凭据。
+- [官方账号 Provider 的登出/拒绝/资料和 record key](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account-platform/src/index.ts)；[不含内容的 record-updated 事件](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/credentials/src/types.ts)。只观察固定 key，不调用 readRecord 或 secrets 方法。
+- [公开 DesktopBrowserBridge types](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar-browser/src/types.ts)；[官方 preload Browser 桥](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/apps/desktop/src/preload-browser.ts)。只提供 acquire/release/approved popup，没有网页身份或登出通知。
+- [主进程 Guest 安全与存储策略](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/apps/desktop/src/browser-guests.ts)；[官方 Browser bootstrap 属性](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar-browser/src/client/electron/ElectronWebviewPresentation.ts)。固定隔离，内存分区，无原生下载/设备权限许可。
+- [main 只渲染当前键](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/AppFrame.tsx)；[Slots 定义](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/index.ts)。保活容器置于自己的 additive shell.overlay，以自己的 main ref 矩形定位。
+- [官方 Typert Gateway 调用/严格验证/取消](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/README.md)。本仓库 server.test 使用实际目标 Cordis/Typert/Gateway 在无网络的假账号服务上验证绑定，不冒充真实账号测试。
+- 本机 app.asar 只读元数据/公开 bundled main/preload 核对确实为 rc.2，存在上述 Browser 桥；没有修改安装包或读取用户会话。
+- 官网公开无凭据 HTTP HEAD 返回 429，浏览器抓取也受限。这不是 iframe CSP/XFO 的可靠证据，不能声称 Web iframe 可用；Desktop 路线依赖其公开顶层 guest，实际官网登录及聊天仍待实测。

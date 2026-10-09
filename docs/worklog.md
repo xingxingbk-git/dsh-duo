@@ -66,3 +66,32 @@
 - 当前事实：审阅开始时工作区干净；HEAD `a95f64d` 与 `origin/main` 0 ahead / 0 behind。Host/Client `apply` 均为空，尚未安装依赖、生成 lockfile、执行 typecheck/build、安装/加载插件或运行授权/UI/聊天测试。
 - 环境记录：当前 shell 的 Node.js 为 `v24.15.0`、pnpm 为 `11.7.0`，`dsh` 不在 PATH；项目文档中的 DSH `0.2.0-rc.2` / Cordis `4.0.4` / React `18.3.1` 是静态审查基线，非本轮运行时连接验证。
 - 影响：没有修改运行代码或产品决策；下一主线仍是 T04（官方授权/账号状态与 UI 契约 live 能力发现）和可独立推进的 T05（版本对齐、依赖/TSX/样式构建准备）。本条更新 handoff/worklog 以满足跨设备接力；未提交、未推送。
+
+## W008 · 2026-10-09 · T04–T10/T12/T13 · 插件实现开工
+
+- 触发：用户要求阅读项目文档并制作 dsh-duo。已重新读取全部当前需求、架构、路线、来源和交接记录；本轮基线 main `93702ea`，fetch 成功，工作区开工干净。
+- 分工：主 Agent 集成 src/文档及验证；授权与 UI 子 Agent 只读核对固定官方源码；构建子 Agent 仅修改 package/tsconfig/build/lockfile。未授权提交/推送，保留本地可审查成果。
+- 当前环境：DSH `0.2.0-rc.2`（本机 Info.plist），Node.js `v24.14.1`、pnpm `10.33.2`；无 live Cordis Inspect 工具。继续静态官方契约核查，不伪造 live 结果。
+- 阶段状态：本轮候选版实现与安全验证已结束，最终产物、验证结果、未完成项和下一步见 W010 与 handoff；真实Desktop验收尚未完成。
+
+## W009 · 2026-10-09 · T03/T04/T06–T12 · 数据源澄清与真实网页嵌入
+
+- 用户澄清：希望直接使用 DeepSeek 网页的页面数据、聊天和同账号历史；对话应由网站保存并在网页即时可见，优先用 DSH 框架显示，也允许直接内嵌网页。此前讨论“插件自己的聊天记录如何保存”源于错误的数据源理解，已被本条替代。
+- 实现调整：移除初写的 llm/models/chat RPC 和独立本地聊天 UI。Host 仅保留不含凭据的 DSH 授权状态桥；Client 转为使用公开 Desktop Browser lease 和真实网页。没有发送真实模型请求、收费请求或上传聊天内容。
+- 用户允许先试用可访问的入口及原新建快捷键限制。原品牌位仍是最终目标；不把临时入口写成原品牌验收完成。
+- 官方与安装版证据：Desktop 0.2.0-rc.2 主窗口确有 `dshDesktop.browser` 和受批准 lease 的 webview；原生 main 会卸载非当前键，因此容器保活放在自己的 shell.overlay，占位 main 仅报告插件自己元素的矩形。手动回 Harness 隐藏容器，避免网页文档被销毁。
+- 边界：DSH 与网页授权不共享；公开桥无法观察网页身份/登出，Browser 分区只保留当前进程且拒绝下载/设备权限。不能用 URL/title 猜授权、注入网页脚本、读 Cookie/token 或修改网页安全策略。网页登录/历史一致性尚无实测；无公开原生历史 API。
+- 官网公开 HEAD 返回 429，不能从这次受限响应推断 iframe 允许或禁止；候选版仅在具有官方 Desktop 桥时开放，不做未经验证的 Web iframe 回退。
+- 产物与完成验证见 W010，源码与上下文尚未提交/推送。
+
+## W010 · 2026-10-09 · T01/T04–T13 · 网页候选版交付与分层验证
+
+- 完成：Host无凭据授权桥、strict Typert协议、统一ModeController、CHAT临时可达入口/自己的侧栏与main、官方Desktop Browser lease和真实官网容器。手动切换保活，DSH登出/授权变化先恢复，再释放旧guest；显式故障重试只替换失败容器。原独立模型聊天和本地记录已删除。
+- 文件：src/index/client/authorization/protocol/server/core/mode/ui/styles/web-surface；package/tsconfig/pnpm-lock及build/client-contract/check-artifact/test/preview脚本；tests、开发preview；README及Agent上下文主文档。授权、UI、构建三个子Agent分工完成后交还协调者；共享文档由协调者整合。
+- 构建：冻结离线安装、pnpm typecheck/build/test/package:plugin、git diff --check均通过；19/19测试，真实Cordis/Registry/Host Gateway/Client lazyCJS配合本地carrier及安全账户fixture，验证协议挂载/严格校验/unary/stream/卸载。模拟或本地carrier不是DSH GUI、真实账户或官网验收。
+- 安装包：artifacts/dsh-duo-0.1.0.tgz，14个白名单文件，SHA256 2c4d8b27b297e5448d9665eb09d90acd833d6544475996ead9643fc2d3f08f26；Client只请求React、JSX runtime、官方ui-primitives三个baseline，Zod内联，无第二份Cordis/React实例。
+- 真实Host安装检查：独立/tmp的web profile安装最终hash命名tgz，核对安装文件hash；官方CLI运行时临时只读诊断确认两个dshDuo方法真实挂载，不调用账号。卸载后bundle/依赖撤回且配置与安装前逐字一致，原Host重启无loader错误。匿名HTTP401属官方门槛。专用验证进程停止，端口释放，含临时传输token的原始日志清理；用户真实profile未触碰。
+- 浏览器模拟：pnpm preview复用实际组件和ModeController，native guest/授权/layout是fixture且CSP禁止访问官网。Playwright通过授权禁用/首次保持Harness、往返同lease与Harness草稿、同账号刷新、resize/折叠、进程故障显式重试、登出释放、换账号新分区；0 errors/0 warnings。截图为明确标记“未加载官网”的模拟界面，不能证明真实网页数据。
+- 失败尝试与修复：Playwright首次因沙箱DNS失败，授权工具网络后CLI可用；折叠模拟最初超时，核对官方AppFrame固定grid列后发现preview缺owner约束，仅补开发wrapper并重测通过，生产无改动。官方Client直接Node ESM导入因window不存在失败，改按正式lazyCJS契约测。pnpm同路径同版本tgz --force仍报Already up to date且装着旧骨架，改唯一hash路径并核对hash才计成功；remove不接受--ignore-scripts，专用profile改--config.ignore-scripts=true完成。
+- 限制与交接：没有真实Desktop官网登录、消息、验证码/上传、两端历史、原生Session/右栏和Desktop禁用/卸载证据。DSH登录与网页登录独立，内部网页退出不可观察；草稿提取/网页生成取消和原生历史重绘缺公开能力。下一步由用户本人完成网页登录并用非敏感对话验收。此阶段源码、任务与上下文仅本地保存，未提交/未推送，不声称跨设备已同步。
+- 结束检查：再次fetch成功，HEAD与origin/main仍0 ahead/0 behind；Markdown本地链接、package JSON和差异格式检查通过。模拟浏览器/preview及隔离Host服务均已关闭，未停止用户DSH。安装说明已在Codex面板打开。

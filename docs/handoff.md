@@ -1,103 +1,68 @@
 # 当前状态与开发接力
 
-更新日期：2026-10-09（Asia/Shanghai）。本文件是全项目当前上下文快照，不限于某次登录需求。所有设备和 Agent 工具都应先读 `AGENTS.md`、本文件和 [worklog.md](worklog.md) 近期记录，再开始工作。详细领域信息以对应主文档为准，不复制整个聊天记录。
+更新日期：2026-10-09（Asia/Shanghai）。这是当前项目快照；需求以 requirements、技术依据以 architecture/references、决策历史以 worklog 为准。旧审查快照不覆盖本轮用户澄清。
 
-## 总目标与工作范围
+## 总目标与当前路线
 
-为 DSH 增加接近 DeepSeek 网页聊天体验的 CHAT，并通过品牌区 `CHAT | HARNESS` 控件与原 Agent/Harness 体验可逆切换。CHAT 有独立对话导航和主区，隐藏 Harness 专属右栏；回退时完整恢复原工作区。账号授权是 CHAT 的前提，真实聊天和网页历史同步分别受官方能力限制。
+用户需要真实 `chat.deepseek.com` 同一网页账号的聊天和服务器历史，优先 DSH 原生外框架显示，允许网页嵌入。不能用 DSH 模型 API 加插件本地对话冒充官网同步。
 
-整个项目的工作包含：需求和验收、官方能力调研、UI 设计、骨架与构建、授权适配、模式控制、聊天导航/主区、状态恢复、真实聊天/数据存储、网页历史、安装/卸载/兼容验证、发布，以及全程文档和 Git 接力。哪些已做/未做见任务总表，不能用本轮小目标替代总目标。
+当前制作 **DSH Desktop 0.2.0-rc.2 网页嵌入候选版**：DSH 授权门槛、CHAT/HARNESS 可逆导航、官方隔离 webview、手动切换保活。用户已接受可访问的临时切换入口及原新建快捷键限制。官网内部仍是完整网页，原生历史重绘缺公开接口依据。
 
-## 仓库与当前阶段
+## 基线与工作范围
 
-- 仓库：`git@github.com:xingxingbk-git/dsh-duo.git`；主分支：`main`。
-- 当前阶段：官方能力审计、方案修订和项目骨架。尚未进入功能实现，Host/Client 的 `apply` 都是空函数。
-- 本轮状态梳理（2026-10-09 17:24 CST）：已按 AGENTS 阅读项目入口、需求/架构/路线/资料、handoff/worklog、源码骨架和历史审查快照；`git fetch origin --prune` 后本地 `main` 与 `origin/main` 为 0 ahead / 0 behind，审阅开始时工作区干净，HEAD 为 `a95f64d`。本轮没有实现新插件功能、安装依赖或运行完整构建。
-- 当前设备工具记录：Node.js `v24.15.0`、pnpm `11.7.0`；`dsh` 不在当前 shell PATH。目标静态基线仍是 DSH `0.2.0-rc.2` / Cordis `4.0.4` / React `18.3.1`，不是本次 runtime 实测。
-- 已验证同步基线：`0c86b04617871f20b7172e1bb5f4f5e8f8684f47`（全项目上下文机制提交），此前本地 HEAD 与远端 main 一致。本轮开工 `git fetch origin` 后相对 origin/main 为 0 ahead / 0 behind。此哈希是历史基线，不是本文件将来所在提交的固定哈希；接力以 `git log -1`、fetch 和实际远端检查为准。
-- 没有安装依赖、改动现有运行代码、读取用户凭据或修改 DSH 安装包。
+- 仓库 main，开工基线 `93702ea2d875c3f3700a128d2f20cb5751810bae`；开工工作区干净，fetch 成功，0 ahead / 0 behind。本轮未授权提交/推送，源码和上下文修改保留本地，**尚未跨设备同步**。
+- 本机 DSH Info.plist/app.asar package `0.2.0-rc.2`、Cordis archive metadata `4.0.4`；官方 npm React/client 基线 `18.3.1`。Node `v24.14.1` / pnpm `10.33.2`；DSH bundled pnpm `11.7.0` 只用于独立 profile 安装。
+- 本轮工具没有 live Cordis Inspect。静态契约固定在官方 commit `639ed015397290b3745d163aafe02ffee4aa3f84`，本机公开 native Browser/preload 入口也做了只读核对；不读取凭据或修改安装包。
+- 本轮分工已结束：本地 Codex 主 Agent 负责 src/client/core、全部上下文和集成；auth_contract 完成授权桥/protocol/server及无网络契约测试；ui_contract 完成 UI/styles/persistent网页容器及独立开发preview；build_setup 完成依赖/构建/锁文件/打包、独立profile和Client竞态测试。共享docs仅协调者写入，代码文件范围无重叠。未验收任务交还后续协调者，无子 Agent 持有中的文件锁。
 
-## 全部任务与依赖
+## 全部任务当前快照
 
-任务 ID 保持稳定。完成标准参考下列产物/验收及 [requirements.md](requirements.md)、[roadmap.md](roadmap.md)。状态“完成”只覆盖明确列出的成果；“待验证”不等于受阻或已支持。新增工作须进入此表，变更依赖/状态及时更新。
+| ID | 目标 | 本轮实际成果与状态 | 依赖/负责人下一步 |
+|---|---|---|---|
+| T01 | Host/Client、manifest、patch骨架 | 已转为功能源码，Host安全账号桥、Client真实网页容器 | 本轮集成；真实安装见T12 |
+| T02 | 目标官方能力与版本 | 固定源码+安装版入口核对；无live Inspect | 后续设备复核版本与工具 |
+| T03 | 需求/授权规则/数据源 | 已同步用户官网数据澄清、允许嵌入/临时入口；保留原最终目标 | requirements为准，不再问本地聊天保存 |
+| T04 | 官方授权读取/通知 | getState/getProfile/watch、登出/失效、安全record-key代次栅栏已实现；官网授权状态无法观察 | DSH真实登录/退出仍待实测 |
+| T05 | 锁定依赖/TSX/build | lockfile、Host ESM、精确lazy-CJS、strict codecs、最终tarball构建已通过，14个白名单文件 | 当前包可由官方管理器安装，Desktop GUI见T12 |
+| T06 | 品牌/可达入口/新建 | additive footer/overlay、CHAT自己的控制侧栏已实现；用户接受试用；最终品牌契约仍未解决 | 原新建快捷键可能改Harness Session，不能标完整验收 |
+| T07 | 门槛/可逆模式/即时回退 | 统一ModeController、原panel恢复、账号/迟到回包栅栏；DI单测已过 | 真实DSH恢复和登出待验收 |
+| T08 | Chat主区/导航 | 真实官网容器；官网自己的导航/消息/历史。独立本地聊天UI已删除 | Web缺native桥保持禁用 |
+| T09 | 保活/Session/右栏/卸载 | 纯状态/Client清理顺序测试及Playwright模拟保活/恢复/resize/折叠/故障重试/换账号已过 | 真实Desktop矩阵仍待本人官网登录验收 |
+| T10 | 真实网页聊天 | 代码只加载官方网页，无独立llm发送；网站自行处理 | 本人网页登录/发送/验证码待验证 |
+| T11 | 官网页面历史 | 嵌入真实网页而非复制同步；无公开原生历史接口 | 同网页账号跨端历史一致性需真实验收 |
+| T12 | 安装/禁用/卸载/兼容 | 最终包独立Web profile安装、真实Host服务挂载、卸载、配置逐字恢复和重新启动已通过；Desktop guest未验收 | 在真实Desktop安装最终tgz并验证恢复 |
+| T13 | 上下文与Git接力 | requirements/architecture/roadmap/references/README/AGENTS/worklog同步本轮路线 | 本地未提交/未推送，后续获授权再交付Git |
 
-| ID | 目标与完成标准 | 当前状态/证据 | 依赖 | 负责人及文件范围 | 下一步 |
-|---|---|---|---|---|---|
-| T01 | 建立 Host/Client、manifest、patch 与构建草案 | 结构完成；`src` 两个 apply 为空；未通过完整构建 | 无 | 未分配；`src/`、package、patch、构建脚本 | 后续实现归入对应任务，不重复创建骨架 |
-| T02 | 官方插件/UI 能力与版本审查 | 静态审查完成；来源在 architecture/references；live 行为待验证 | T01 | 未分配；architecture/references | 在目标设备复核版本，补 live 证据 |
-| T03 | 明确产品目标、授权规则与验收 | 当前决策文档完成；详情见 requirements；后续随决策维护 | 无 | 未分配；requirements/README | 新决策同时写理由与受影响任务 |
-| T04 | 确认官方授权读取/订阅、身份、登出/撤销与取消契约 | 待能力验证；仅有旧服务目录记录 | T02 | 未分配；architecture/references | **下一主线：Inspect list 后精确查询** |
-| T05 | 对齐依赖，补 TSX/React/样式，生成锁文件并通过 typecheck/build | 未开始；`*` 与无锁文件风险仍在 | T02 | 未分配；package/tsconfig/build/lockfile | 可与 T04 并行，先核对目标兼容版本 |
-| T06 | 解决品牌区交互、折叠入口、原新建/快捷键的官方方案 | 待契约验证；已知品牌 aria-hidden/外层按钮问题 | T02 | 未分配；UI 方案及 Client | 先确认 owner/可交互入口，保持原视觉目标 |
-| T07 | 实现统一授权门槛、模式切换与退出回退 | 未开始；方案已写，不是实现 | T04、T05、T06 | 未分配；授权适配/模式控制/Client | 先定义已确认输入和可逆导航边界 |
-| T08 | 实现 Chat 导航/main 和开发 mock 面板 | 未开始；mock 仅用于 UI 验证 | T05、T06、T07 | 未分配；Chat UI/Client | 按官方 Slot 生命周期装配，隔离 Harness |
-| T09 | 验证 Session、原 panel/右栏、草稿/生成与卸载恢复 | 未开始；原生右栏隐藏只有静态证据 | T07、T08 | 未分配；模式控制/恢复验证 | 覆盖 requirements 完整恢复矩阵 |
-| T10 | 接官方真实聊天/流式取消，确定账号隔离存储策略 | 未开始；数据源及持久化仍待确认 | T04、T05、T07、T08 | 未分配；provider/Host/存储 | 先核实真实发送能力，不开放匿名或编码工具 |
-| T11 | 评估/接入官方网页历史同步 | 待官方能力证据；未找到第三方支持接口 | T02；实际接入另需官方历史授权与接口 | 未分配；references/provider | 独立审计，不把登录或模型调用当同步证明 |
-| T12 | 安装/禁用/卸载、兼容、隐私、发布验收 | 未开始；不能发布为可运行插件 | T05、T07、T08、T09、T10；T11 若声明支持 | 未分配；发布与验证文档 | 各阶段可先测安装恢复，最终按声明能力验收 |
-| T13 | 全项目上下文机制、任务记录与仓库交付 | 机制已建立；本轮明确 README 产品职责与 AGENTS 上下文职责 | 无；贯穿所有任务 | 本轮文档整合已结束，接力未分配；AGENTS/handoff/worklog；README 仅产品说明 | 每个工作阶段维护 Agent 上下文，推送后核对远端 |
+## 实际文件与产物
 
-## 并行分工与集成状态
+- src：index/client、authorization/server/protocol、core/mode、ui/styles/web-surface。
+- 构建：package/tsconfig/pnpm-lock，scripts/build/client-contract/check-artifact/test/preview，.gitignore。
+- 验证：tests/authorization、mode、client、server；preview仅开发模拟，不进入插件tarball。
+- 最终安装包：`artifacts/dsh-duo-0.1.0.tgz`，包含当前README/source的构建产物，共14个白名单文件。SHA256 `2c4d8b27b297e5448d9665eb09d90acd833d6544475996ead9643fc2d3f08f26`；安装包、构建产物和验证截图不提交。
 
-- 本轮由一个 Agent 整合文档职责和产品 README；没有并行委派或插件功能实现。
-- 本轮结束后无任务留作“进行中”；上表“未分配”不代表任务会自行在后台执行。
-- 下一轮开工登记：任务 ID、目标/完成标准、负责人/设备或工具标识、分支及基线提交、可写文件、依赖、进展与交接对象。同文件并行修改需协调，不把任务表当自动文件锁。
-- 多 Agent 共用 checkout 时由协调者维护此文件/worklog；子 Agent 反馈实际变更和验证，不各自覆盖共享快照。跨设备/分支集成前 fetch、对比新提交，再合并真实工作，不覆盖别人的进展。
+## 已执行的验证与限制
 
-## 已确认需求
+- pnpm install --ignore-scripts、frozen offline install：通过，精确官方发布版本锁定。
+- pnpm typecheck、pnpm build：通过；Client仅require react/react-jsx-runtime/ui-primitives三项共享baseline，单lazy工厂检查通过。
+- pnpm test：19/19通过。包括授权pending/ready、网络故障、换账号、迟到回包、AbortSignal、Client真实入口/卸载清理，以及实际Cordis/Registry/Host Gateway/Client lazyCJS的本地carrier集成：strict codec、unary/stream、namespace挂载/卸载均通过。账户和carrier是fixture，不能证明真实DSH授权或DSH GUI加载。
+- 最终 pnpm package:plugin 与 git diff --check：通过。Client单工厂、3项共享baseline；tarball不含preview/tests/scripts或依赖。
+- 独立profile：`DSH_HOME=/tmp/dsh-duo-validation-home`，duo-validation从官方web初始化。最终包换用含hash的临时新路径安装，安装后Host/Client文件hash与build一致；官方CLI启动的临时只读诊断确认dshDuo.authorization/watchAuthorization真实存在（仅typeof，无账号调用）。卸载后bundle/dependency撤回、dump-config与安装前逐字一致；不加诊断的原Host再次启动成功，无loader错误。匿名HTTP401是官方门槛，不算网页成功。两个验证进程均停止，3097已释放，含临时传输token的原始日志已清理。没有触碰用户DSH profile或安装包；该Web进程无Desktop桥，不能当native嵌入验收。
+- pnpm preview + Playwright CLI：复用生产组件/ModeController，账号/layout/native guest均模拟，CSP禁止联网官网。初始禁用、首次授权不自动进入、手动往返同一lease/loadURL与Harness草稿、同账号刷新、窄窗口resize、56px侧栏折叠定位、render-process-gone显式重试释放旧lease、登出即时恢复并释放、账号B新分区均通过。模拟console为0 errors/0 warnings。截图在output/playwright，均明确写有未加载官网；pnpm preview可重建，不打入安装包。
+- 官网公开无凭据HEAD返回429；不能判断普通iframe允许。未登录、未发送官网或模型请求，未读取真实用户profile。
+- 真实Desktop网站加载、登录、发送、跨端历史、原生右栏/Session和Desktop禁用/卸载恢复仍待验收。
+- 阶段结束前再次fetch成功，HEAD与origin/main仍0 ahead/0 behind；本轮修改未提交。Markdown本地链接、package JSON、git diff --check均通过。模拟浏览器和preview服务已关闭，可重新运行pnpm preview查看模拟；所有验证服务均不留驻。
 
-1. 未登录/未授权 DeepSeek 账号：保持 HARNESS，整个 `CHAT | HARNESS` 控件置灰禁用；HARNESS 原功能正常。
-2. CHAT 中退出登录或官方确认授权失效：立即阻止新 CHAT 请求、返回此前 HARNESS 工作区/面板，然后禁用控件；不等待用户确认或网络取消完成。
-3. 启动时授权未确认：默认 HARNESS 并禁用；首次确认/重新授权有效后启用，由用户主动进入 CHAT。同账号持续有效的状态刷新不改变当前模式；网络故障不能冒充已确认登出。
-4. 不提供匿名 CHAT，不做匿名聊天登录合并；API key、本地缓存或其它模型配置不替代 DeepSeek 账号授权门槛。
-5. 原视觉目标保留：DeepSeek 图标后的 `CHAT | HARNESS` 切换器、白底选中态。品牌位置的安全交互契约尚未解决，不能自行把替代位置当作最终需求已完成。
-6. CHAT 使用独立导航与主区，隐藏 Harness 专属右栏；正常切换、登出回退、禁用/卸载都要恢复此前 Harness 状态。普通 Chat 不能继续执行编码工具。
-7. 网页历史同步仍是目标/待验证能力；有效登录授权不能证明同步接口已开放。
+## 必须保留的产品边界
 
-## 已确认技术证据
+1. DSH授权与网页登录独立。DSH官方登出可自动回Harness；网页内部登出无公开通知，不能承诺同样联动或账号匹配。
+2. Browser storage进程内存隔离；重启需重新网页登录，不转移浏览器Cookie。手动模式往返保留文档；授权代次变化/卸载销毁guest，插件无法提取网页草稿或调用私有停止生成。
+3. 原Harness新建快捷键保留，可能新建Session；自动退出CHAT只处理布局，不能保证原Session完整保真。
+4. 下载/设备权限/外部OAuth弹窗受官方固定安全策略限制；网站具体功能待实测。未关闭webSecurity、注入脚本、抓私有接口或改安装包。
+5. 这是候选网页嵌入；原生重绘、最终品牌位、其他版本与Web iframe不宣称支持。
 
-| 项目 | 证据与适用范围 |
-|---|---|
-| DSH | 本次 macOS 安装包 **0.2.0-rc.2**，不是其它设备/运行进程版本保证。 |
-| 官方源码 | tag `dsh-v0.2.0-rc.2`，commit `639ed015397290b3745d163aafe02ffee4aa3f84`；链接见 `references.md`。 |
-| 共享依赖 | 安装产物 Cordis **4.0.4**、React **18.3.1**，相关 UI 包 **0.2.0-rc.2**。 |
-| 本次命令环境 | Node.js **v24.15.0**、pnpm **11.0.9**；只记录本设备实测，不作为未经验证的跨设备最低要求。 |
-| 插件骨架 | 双入口、bundle patch、`dsh.client.platform: web` 和 lazy-CJS 方向符合官方结构；项目未实际加载。 |
-| 品牌槽 | 在 `aria-hidden` 祖先内，Web/Windows 外层为新建会话按钮，折叠后不可见；不能直接放交互 selector。 |
-| 左侧导航 | `sidebar.workspaces` 不覆盖 shell 自带新建会话/品牌点击/快捷键，需要单独核查。 |
-| 主面板/右栏 | 安装版独立 main panel 使 Harness 右栏自然隐藏并保留 Session 子树；应恢复原 `activePanelId`，完整状态恢复未实测。 |
-| 授权 API | `deepseekAccount` 等只有项目创建阶段的服务目录记录。当前没有已确认的官方状态读取/订阅/失效处理接口，不能猜方法。 |
+## 可执行下一步
 
-静态证据、历史 Inspect 与真实功能验证必须分开写。本次 Codex 未连接 Cordis Inspect，官方源码核对不能替代下一阶段 live 查询。更详细的证据见 `architecture.md` 与 `references.md`；`review-2026-10-09.md` 是方案修订前的历史快照。
-
-文档职责已由用户澄清：README 仅面向插件使用者；所有项目目标、计划、进度、分工、决策和记忆从 AGENTS 及其引用文档读取和维护。原先放入 README 的同步协议、任务状态和开发上下文已移除，不再以 README 维持接力记忆。
-
-## 已执行与尚未执行的验证
-
-- 已执行：读取所有项目文件、官方文档正文、对应版本 UI 源码及安装产物；安装版本核查；`node --check scripts/build.mjs`；package/tsconfig JSON 解析；文档一致性和相对链接检查。
-- 已执行：SSH `git ls-remote` 确认用户仓库可访问且在初始化时没有远端 refs；使用既有 Git 提交身份，未更改全局设置。
-- 尚未执行：`pnpm install`、`pnpm typecheck`、`pnpm build`、插件安装/热加载、真实授权联动、UI 往返和禁用/卸载测试。
-- 当前没有 `node_modules`、`lib`、lockfile；`*` 依赖范围、TSX/React 和样式构建仍需处理。语法检查通过不等于插件可运行。
-- 本轮只整理 README 与 Agent 上下文的文档职责；源码、依赖与功能验证状态没有改变。已执行 `python3` 文档检查（9 份 Markdown 的相对链接/代码围栏、13 个任务 ID/引用、README 职责边界），全部通过；`rg -n 'README|readme' AGENTS.md docs` 核查当前规则与历史记录，未发现当前职责冲突；`git diff --check` 通过。提交/远端同步以实际 Git 检查为准。
-
-## 下一阶段的具体步骤
-
-1. 在接力设备 fetch/拉取最新仓库，检查干净状态、分支和 `git log -1`；核对本机 DSH、Cordis、React、Node.js、pnpm 和 Inspect 工具。
-2. 在 DSH 中先 Inspect `list`，再使用实际 Provider/Method 查官方账号授权状态、订阅登出/失效/账号切换，以及可用取消能力；把准确契约、版本、来源写入 `architecture.md`/`references.md`。没有接口证据时不能模拟网页登录或依赖私有接口。
-3. 对齐目标 DSH 依赖，补 TSX/React 与官方支持的样式构建，生成并提交锁文件，执行 typecheck/build。不要按 `latest` 假定版本兼容。
-4. 解决品牌区交互、折叠可达性、新建会话/快捷键行为；只有正式布局方案或临时 spike 的边界清楚后再写 UI。
-5. 先用 mock 内容验证统一授权门槛与可逆导航。所有入口都必须拒绝未授权进入 CHAT；退出/失效在生成中也必须立即回 Harness。
-6. 实测恢复原主面板、Session、草稿、右栏标签/宽度/全屏/浮窗，再验证 CHAT 下禁用/卸载。随后接真实聊天数据源；网页历史同步独立审计。
-
-## 本轮尚需验证/决定
-
-- 官方账号授权观察、订阅和取消接口：技术待验证，不是待用户重确认的登录规则。
-- 原品牌位置的官方交互契约：待验证；替代位置或更大范围侧栏替换若改变原目标，应展示具体方案。
-- 已授权普通聊天的数据源、账号隔离缓存位置及保留/清除策略：尚未最终确定，不能据此开放匿名聊天。
-- 官网历史接口：未找到官方第三方支持证据，不能承诺同步或把本地缓存称为官网历史。
-
-## 每次接力的完成要求
-
-同步所有有实质影响的工作：总目标/本轮目标、任务拆分和依赖、已完成/未完成、负责人/分支/文件范围、实际版本、发现、失败或放弃方案及理由、变更产物、验证命令/结果、限制、待决问题和明确下一步。更新当前快照，同时在 worklog 追加阶段记录；产品/架构变化写入对应主文档，稳定规则变化写入 AGENTS。
-
-将成果与文档一起提交，在已授权推送时核对远端同步。接力者拉取后主动读上下文；未提交工作/聊天不会自动同步，离线或推送失败必须说明。不得将 `/tmp`、安装包提取文件、聊天记忆或个人凭据作为下一台设备的必要输入。
+1. 在实际DSH Desktop的官方插件管理器安装最终tgz，用户本人完成DSH授权和网页登录。使用非敏感测试对话，去系统浏览器同网页账号核对历史。构建与安全mock本轮已完成，接力无需重复调研数据源。
+2. 验证原panel/右栏/Session、网页草稿、DSH登出和卸载；网站内部登出仍记录限制。Desktop晚到acquire/网络/进程故障仍须实测。不要通过Cookie/token或网页私有API实现“同步”。
+3. 如修改并重装同版本tarball，DSH内的pnpm可能把同路径识别为Already up to date；即便--force也不可直接当作更新成功。本轮改用含hash的新路径并核对安装文件hash后才确认当前包。新设备无需依赖/tmp产物，直接重建并给新包唯一文件名。
+4. 将真实结果更新当前快照/worklog；只有获授权后一起提交推送。仅本地完成或mock通过时不声称官网功能已验收。

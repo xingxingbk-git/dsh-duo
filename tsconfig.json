@@ -4,14 +4,16 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": "src",
-    "outDir": "lib",
+    "outDir": "lib/types",
     "declaration": true,
+    "emitDeclarationOnly": true,
     "declarationMap": false,
     "sourceMap": false,
     "strict": true,
+    "jsx": "react-jsx",
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
