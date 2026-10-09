@@ -1,0 +1,5 @@
+# Bundle layer: insert the host half into the Cordis plugin tree.
+# The package manifest separately exposes the browser half as `dsh.client`.
+- insert:
+    - id: dsh-duo
+      name: dsh-duo

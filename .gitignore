@@ -1,0 +1,12 @@
+node_modules/
+lib/
+*.tsbuildinfo
+.DS_Store
+
+# Local credentials, environment overrides and diagnostic output
+.env
+.env.*
+!.env.example
+*.log
+.codex/
+.aws/
