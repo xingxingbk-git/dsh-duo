@@ -282,3 +282,12 @@ CUA运行时重置后旧cwd不存在导致无法连接，临时symlink被工具�
 W019最终打包收尾：19文件包1d5ab1718f12（完整哈希见handoff），源码/包/当前安装的Host、Client与用户SVG逐字节相同；本插件配置再次确认zh-CN。最终源码已由DSH内置pnpm11.7.0隔离Git fixture成功prepare/导入/Client契约，内层10.33.2与esbuild批准提示保留。源码诊断扫描无匹配，diff --check通过。README仅更新实测使用能力与限制，接力内容只在AGENTS/docs；同轮0.1.5、用户手动Git。
 
 最终1d5ab1718f12包官方CLI安装exit0，19个白名单文件逐项与node_modules相同。热更新时已打开的设置再次保留旧引用并显示连接中；关闭设置→进入CHAT→重开设置即可恢复真实账号/简体中文，未重启DSH或再次登录。最终停留精简CHAT设置供用户查看，已更新本机截图。旧cwd临时空目录收尾用rmdir清理，不删除任何项目。
+
+
+## W020 · 2026-10-10 · T13 · 拉取最新代码与仓库改名
+
+- 用户要求拉取最新项目代码，并确认仓库已改名。本机旧 dsh-duo 目录不存在；Codex 项目清单与实际 Git remote 确认同一项目位于 `/Users/huangxingzhou/Documents/编程项目/dsh-chat`，没有重新初始化、复制或创建嵌套仓库。
+- 开工 main `e1a19e2`、工作区干净；fetch 得到 8 个远端新提交，本地无独有提交。`git merge --ff-only origin/main` 成功更新到 `1f537ff0cba08b2a7b75049f95e42ebeec226dc3`（Refine chat settings and session navigation）。
+- 最新 AGENTS/manifest 已使用 dsh-chat、版本 0.1.5。新 URL 的 `git ls-remote` 与 HEAD 一致，origin 从旧 HTTPS dsh-duo 地址更新为 `https://github.com/xingxingbk-git/dsh-chat.git`；复核 HEAD/origin/main 为 0/0。
+- 主 Agent 负责唯一 Git 写操作与上下文记录，ui_contract 仅只读拉取前文档；拉取后最新授权和交付规则由主 Agent 读取。仅改两份上下文同步记录，不修改功能或 README，不新增运行验收，不涨版本，不 stage/commit/push；记录保留本地供用户手动提交。
+- 起初默认 cwd 失效导致命令无法创建，改用真实目录和显式 shell/workdir 后恢复；无需修改安装包或恢复旧路径。Git 元数据与新目录写入经工具权限提升完成，无丢弃本地修改或强推。下一步按最新 W019 交接继续；本轮没有运行构建/测试或重装插件。

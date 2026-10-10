@@ -1,5 +1,13 @@
 # 当前状态与开发接力
 
+## 本机 Git 同步快照 · 2026-10-10 · T13
+
+- 用户要求拉取最新代码，并确认仓库已改名为 dsh-chat。当前本机真实目录为 `/Users/huangxingzhou/Documents/编程项目/dsh-chat`；旧 dsh-duo 目录不存在，不创建重复仓库或嵌套目录。下方 W019 路径与运行结果属于历史设备记录。
+- 协调者：本地 Codex 主 Agent 执行 Git 同步与记录；ui_contract 只读核对拉取前文档，未修改文件。拉取后新规则由主 Agent 读取，分工已结束。
+- 开工 main 为 `e1a19e2`、工作区干净。fetch 确认落后 8 个提交且没有本地独有提交；`git merge --ff-only origin/main` 成功至 `1f537ff0cba08b2a7b75049f95e42ebeec226dc3`。
+- 已用 `git ls-remote` 核对新仓库 main 与本地 HEAD 一致，将 origin fetch/push URL 改为 `https://github.com/xingxingbk-git/dsh-chat.git`，保留 HTTPS 方式。HEAD 与 origin/main 为 0 ahead / 0 behind；源码版本为 0.1.5，本轮仅同步，不递增版本。
+- 没有执行构建、测试、安装、提交或推送；未清理产物或改插件功能。本轮只追加 handoff/worklog 同步记录，记录尚未提交；拉取的新代码已与远端一致。后续功能工作按下方 W019 状态继续，不能把本轮 Git 同步当作新的功能验收。
+
 更新日期：2026-10-10（Asia/Shanghai）。W019 / **0.1.5本地验收候选**，单Agent Codex/macOS，无并行Agent。本轮工作收尾交还用户；main基线0df604f，0.1.4→0.1.5已递增一次，同轮调试不再涨号。不stage/commit/push。实际目录/仓库为/Users/ui/Downloads/dsh-chat、git@github.com:xingxingbk-git/dsh-chat.git。
 
 ## 当前目标与范围
