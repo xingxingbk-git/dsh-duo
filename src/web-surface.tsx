@@ -2,14 +2,16 @@ import { createElement, useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { DuoModeSelector, DuoStyles, useDuo, type DuoBridgeProps } from './ui.js'
+import { emptyNavigation, parseWebsiteNavigation, websiteCommandScript, type WebsiteCommand } from './website-navigation.js'
 
 const WEBSITE_URL = 'https://chat.deepseek.com/'
 
-/** Public native tag methods used by DSH's official browser provider. No script execution surface. */
+/** Public Electron methods on our approved, isolated DSH Browser guest. */
 interface WebsiteWebview extends HTMLElement {
   loadURL(url: string): Promise<void>
   getURL(): string
   reload(): void
+  executeJavaScript(code: string): Promise<unknown>
 }
 
 interface ReservationState {
@@ -100,6 +102,42 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
       else if (error !== null) lastError = error
       if (!events.signal.aborted) bridge.reportWebsiteState(generation, { loading, error: lastError })
     }
+    let reading = false
+    let queued = Promise.resolve()
+    const execute = async (command: WebsiteCommand) => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        return await Promise.race([current.executeJavaScript(websiteCommandScript(command)), new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('Website navigation deadline exceeded')), 8000)
+        })])
+      } finally { clearTimeout(timer) }
+    }
+    const adapt = async (command: WebsiteCommand) => {
+      const snapshot = bridge.getSnapshot()
+      if (events.signal.aborted || snapshot.authorizationGeneration !== generation || snapshot.mode !== 'chat'
+        || !snapshot.modeEnabled || snapshot.authorizationStatus !== 'authorized') return
+      try {
+        if (!current.getURL().startsWith('https://chat.deepseek.com/')) return
+        const result = parseWebsiteNavigation(await execute(command))
+        if (!events.signal.aborted) bridge.reportWebsiteNavigation(generation, result)
+      } catch {
+        if (!events.signal.aborted) {
+          bridge.reportWebsiteNavigation(generation, { ...emptyNavigation(), status: 'unsupported' })
+          try { await execute({type:'restore'}) } catch { /* The next ready event retries a recovered guest. */ }
+        }
+      }
+    }
+    const syncNavigation = () => {
+      if (reading || events.signal.aborted) return
+      reading = true
+      queued = queued.then(() => adapt({ type: 'snapshot', showOriginal: bridge.getSnapshot().showWebsiteNavigation })).finally(() => { reading = false })
+    }
+    const stopCommands = bridge.bindWebsiteNavigation(generation, command => {
+      queued = queued.then(() => adapt(command)).then(() => adapt({type:'snapshot',showOriginal:bridge.getSnapshot().showWebsiteNavigation}))
+      return queued
+    })
+    const timer = setInterval(syncNavigation, 1200)
+    events.signal.addEventListener('abort', () => { clearInterval(timer); stopCommands() }, { once: true })
     const navigate = (url: string) => {
       const revision = ++navigationRevision
       report(true)
@@ -111,15 +149,17 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
     }
     current.addEventListener('dom-ready', () => {
       if (!bootstrapped) { bootstrapped = true; navigate(WEBSITE_URL) }
+      else { bridge.reportWebsiteNavigation(generation, emptyNavigation()); syncNavigation() }
     }, { signal: events.signal })
     current.addEventListener('did-start-loading', () => report(true), { signal: events.signal })
-    current.addEventListener('did-stop-loading', () => report(false), { signal: events.signal })
+    current.addEventListener('did-stop-loading', () => { report(false); syncNavigation() }, { signal: events.signal })
     current.addEventListener('did-fail-load', event => {
       const failure = event as Event & { readonly isMainFrame?: boolean; readonly errorCode?: number }
       if (failure.isMainFrame === true && failure.errorCode !== -3) report(false, 'DeepSeek 网页加载失败。请检查网络后重试。')
     }, { signal: events.signal })
     current.addEventListener('render-process-gone', () => {
       needsRecovery.current = true
+      bridge.reportWebsiteNavigation(generation, { ...emptyNavigation(), status: 'unsupported' })
       report(false, '网页进程已退出，请点击「重试网页」。')
     }, { signal: events.signal })
     const offOpen = nativeBrowser.onOpenRequested(reservation.native.lease, url => {
@@ -171,10 +211,12 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
   }}>
     <DuoStyles />
     <header className="dsh-duo-web-toolbar" data-window-drag>
+      {state.brandAnchor === null && <button type="button" onClick={() => bridge.toggleSidebar()} aria-label="显示或隐藏侧边栏"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M7 3v14" stroke="currentColor" strokeWidth="1.4"/></svg></button>}
       <strong>DeepSeek 官网</strong><small>chat.deepseek.com</small>
       <span className="dsh-duo-web-toolbar-spacer" />
       <button type="button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled || state.authorizationStatus !== 'authorized'} title="刷新或重建真实网页，未发送的网页草稿可能丢失">{state.webError !== null ? '重试网页' : '刷新网页'}</button>
-      <DuoModeSelector bridge={bridge} state={state} />
+      <button type="button" onClick={() => bridge.toggleWebsiteNavigation()} aria-pressed={state.showWebsiteNavigation} title="查看官网原导航与网页账号设置">官网导航</button>
+      {state.brandAnchor === null && <DuoModeSelector bridge={bridge} state={state} />}
     </header>
     <div className="dsh-duo-web-content">
       {activeReservation !== null && createElement('webview', {

@@ -101,3 +101,10 @@
 `@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2`发布包的BrandWordmark本身含DeepSeek文字和HARNESS徽标，includeMark=false只去掉鱼图。插件仅在自己渲染的SVG外套视口裁掉徽标，不选择/修改内置SVG。预览从已安装发布包取未改的FishLogo/BrandWordmark片段，不依赖临时提取副本。
 
 Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可切换，折叠隐藏展开恢复，禁用恢复原徽标；官网页面在既有网页登录状态下显示历史导航，没有记录历史标题/URL或发送消息。其他平台、完整右栏矩阵与两端历史一致性仍待验收，见handoff/worklog。本轮web工具读取固定GitHub页面遇Cache miss；契约核查使用已取得的固定源码与发布包，不将抓取失败写成新成功证据。
+
+## W015共用侧栏与有限官网适配证据（2026-10-10）
+
+- [固定Sidebar Slot契约](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/contract/slots.ts)：sidebar.workspaces拥有整块浏览区域，owner仅wide/expandSidebar；顶部New Session回调属于SidebarRoot私有注入，settings为独立foot。发布包类型与固定SidebarRoot源码再次核对，无live Inspect。
+- [固定Workspace导航实现](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-workspace/src/client/navigation.ts)：startSession直接选择/建立Harness会话，无公开模式替换或veto回调；本轮没有猴子补丁或修改该服务。
+- [Electron公开webview.executeJavaScript](https://www.electronjs.org/docs/latest/api/webview-tag#webviewexecutejavascriptcode-usergesture)：仅用于插件自己的批准guest中执行用户已允许的DOM界面适配。文档为当前公开API，目标rc.2实际方法可用性另由本机列表/新建/选中实测确认，不能写成DSH提供了历史API。
+- 本轮成功重读官方Slots文档及上述固定navigation/index源码；官网实际可访问导航链接结构由本机页面观察确认。只保存技术证据和结果摘要，不将个人历史标题/链接或正文写入仓库文档。

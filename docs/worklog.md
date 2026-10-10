@@ -132,3 +132,27 @@
 - 上下文：AGENTS/requirements/architecture/roadmap/references/handoff已更新当前阶段，W012用户手动提交状态与当前35da7f0基线已纠正，旧长验证记录以worklog历史引用保留；README仅调整用户功能与真实能力边界。无进行中分工，完成本阶段交还用户验收，不自动Git交付。
 - 最终验证：pnpm typecheck、test（23/23）、package:plugin通过；单lazy工厂/3共享baseline，14文件tarball。最终SHA256 `77a175008dd8a25151fd5abc4f934614f80bde2b6f07de5175e2ac8aff85e839`，唯一hash包经官方CLI安装，Host/Client逐一hash匹配build。最终AX再次确认顶部两个可用按钮、Harness选中；截图仅本地output/playwright/dsh-duo-brand-header.png。开发preview进程和Agent临时tab已关闭，DSH保持原会话/Harness；未stage/commit/push。
 - 结束Git检查：git diff --check通过，15个源码/测试/文档文件为未暂存修改；暂存区空，main/HEAD仍35da7f0，与origin/main为0/0。W013未跨设备同步，构建包/截图被Git排除，等待用户验收和手动交付。
+
+## W014 · 2026-10-10 · T03/T13 · 修复自动递增补丁版本
+
+- 用户要求以后每次修复自动递增一个修复版本号，纳入所有设备/Agent的统一规则，不使用Codex全局记忆或README保存开发约定。
+- 开工main干净，HEAD/origin/main为c169200fe362c14d71ecc8a9740b711377eca27f，fetch后0/0；W013已同步远端。本轮单Agent/Codex/macOS，仅AGENTS、requirements、handoff/worklog四份文档，无代码/运行时变更。
+- 规则：每完成一轮修复，在构建/打包交付本地验收前将package.json第三段加1，同轮调试/测试重跑不重复涨；接力记录旧值、新值及是否已递增。纯文档/分析/验证不涨，不追溯历史修复，不随版本变动自动commit/tag/push。当前0.1.0→0.1.0，本轮未递增，下次实际修复为0.1.1。
+- 当前Node24.15.0/pnpm10.33.2/Cordis4.0.4/React18.3.1已核对；DSH版本/实机证据沿用W013，不冒称本轮新验收。不调用未知API、不构建/重装、不改兼容目标或依赖。
+- 完成标准：规则写入AGENTS，需求引用与handoff当前基线、版本和任务状态同步；已完成并交还用户，无进行中分工。仅本地待用户手动Git交付，验证结果见结束记录。
+- 结束检查：git diff --check通过；仅上述四份文档未暂存，暂存区为空，package.json实读仍0.1.0。本轮未递增版本、未stage/commit/tag/push，未修改README或运行时；下一轮修复按新规则执行。
+
+## W015 · 2026-10-10 · T06/T08/T09/T13 · 共用原侧栏与真实列表目标
+
+- 用户三张截图指出CHAT完整替换sidebar造成品牌/顶部位置、颜色/透明/模糊、账号区域全部改变，并把真实网页列表留在主区。要求共用原DSH外壳，仅改变必要元素，将官网分组列表放左侧且不创建项目。
+- main基线c169200fe362c14d71ecc8a9740b711377eca27f，W014四份未提交规则文档保留；fetch后0/0。单Agent/Codex/macOS，版本计划0.1.0→0.1.1（本轮尚未递增），代码和上下文仅本地供用户验收，不Git交付。
+- 固定rc.2发布类型/SidebarRoot核对：sidebar.workspaces是可独立替换的中间浏览区域，原sidebar负责顶部New Session、品牌、面板入口和底部settings；ui-sidebar/client只导出类型/apply，不导出SidebarRoot。列表owner仅wide/expandSidebar，不提供官网数据；New Session回调为原registrant私有uiWorkspace.startSession。无live Inspect，官方当前Slots文档已读取但行为以固定rc.2为准。
+- 优先恢复原侧栏并仅替换workspaces，取消插件解释页及完整sidebar/shell.leading覆盖。官网历史原生列表与官网新建需要额外能力，已询问用户是否允许有限网页DOM界面适配（不读凭据/不调私有API）；回复前不实施依赖动作。不能假列表或视口裁切冒充原生同步，不修改DSH核心状态/安装包。
+- 用户随后明确回复「允许网页界面适配，实现左侧真实列表」。已更新稳定约束和需求，官网DOM全面禁止由有限界面适配替代；DSH核心DOM禁止仍保留。下一步核对Electron公开webview执行能力并实施官网界面镜像，结构不匹配时恢复原官网导航。
+- 实机折叠发现main扩展至左沿，网页overlay遮住原shell.leading展开按钮；补工具条备用展开/模式入口，仅品牌锚点不可见时显示，展开后消失。继续共用原sidebar/shell.leading，不覆盖DSH DOM；仍为同轮0.1.1，不二次涨号。此次失败/修正保留，不能以expanded截图证明collapsed可达。
+- 实现文件：src/client仅CHAT注入sidebar.workspaces；ui/styles移除独立侧栏解释页、蓝色品牌和假账号；web-surface保活guest并串行有限DOM适配/8秒检查期限；新增website-navigation自包含origin/链接/列几何限制、清空/恢复原导航。preview始终共用外壳，增加生产适配函数的DOM fixture；client/server fixture与导航输入回归同步。稳定入口/需求/架构/路线/资料/handoff及使用者README已更新，没有把Agent计划写入README。
+- 实际版本0.1.0→0.1.1且已递增一次。pnpm typecheck、pnpm test（27/27）、pnpm package:plugin/artifact检查通过。CSP隔离preview验证分组/选中/新建、空列表、登录视图、结构变化清空并撤回隐藏style、恢复/退出释放，浏览器0 errors/0 warnings；不是官网真实空账号/登出证据。
+- Mac实测在已有网页登录状态下真实列表移到原左栏、选择右侧对应对话、＋官网新建、原顶部/材质/账号持续保留；往返原Harness会话和未发送草稿保活通过，验收草稿已清除，未发送消息。最终包再测列表/选中及折叠→备用展开→原顶部恢复通过。原顶部新会话/菜单/快捷键仍走Harness，缺公开替换回调，不能称为统一新建语义；真实空账号/分页/首次登录/消息/跨端历史/账号回退与完整右栏矩阵待验收。
+- 最终本地包artifacts/dsh-duo-0.1.1-9654619f1e2f.tgz，SHA256 9654619f1e2fd4dfa0b48b146eb1006e65ba236bf94de876ea4e2113907b8535；官方CLI更新desktop，安装版本0.1.1且Host/Client hash逐项匹配build（完整值见handoff）。CLI泛化peer warning保留，不影响本次启用。前两个候选包已被此最终包取代，接力不要选旧hash。
+- 单Agent工作交还用户验收，无进行中分工；源代码/上下文仅本地，未stage/commit/tag/push，远端仍c169200。仍按用户手动Git流程；本轮接力不再涨号，下轮独立修复为0.1.2。截图本地Git排除，仓库不写个人历史标题/链接/正文或凭据。
+- 收尾git diff --check通过、暂存区为空；preview服务和本轮创建的官网检查/模拟浏览器页关闭。最终DSH保留CHAT、已选官网对话、空输入供用户验收；没有发送消息或留下验收草稿，不新增全球记忆。

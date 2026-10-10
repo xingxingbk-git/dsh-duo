@@ -1,9 +1,10 @@
-import { useId, useLayoutEffect, useRef, useSyncExternalStore } from 'react'
-import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { BrandWordmark } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import { duoStyles } from './styles.js'
+import type { WebsiteCommand, WebsiteNavigation } from './website-navigation.js'
 
 export type DuoMode = 'chat' | 'harness'
 
@@ -14,7 +15,7 @@ export interface DuoViewportRect {
   readonly height: number
 }
 
-/** Website content, account secrets and history never enter this snapshot. */
+/** Only in-memory navigation metadata; never message bodies or account secrets. */
 export interface DuoViewState {
   readonly mode: DuoMode
   readonly modeEnabled: boolean
@@ -30,6 +31,8 @@ export interface DuoViewState {
   readonly websiteReloadRevision: number
   readonly viewport: DuoViewportRect | null
   readonly brandAnchor: DuoViewportRect | null
+  readonly websiteNavigation: WebsiteNavigation
+  readonly showWebsiteNavigation: boolean
 }
 
 export interface DuoUIBridge {
@@ -44,6 +47,10 @@ export interface DuoUIBridge {
   updateBrandAnchor(rect: DuoViewportRect | null): void
   reloadWebsite(): void
   reportWebsiteState(generation: number, state: { readonly loading: boolean; readonly error: string | null }): void
+  reportWebsiteNavigation(generation: number, value: unknown): void
+  bindWebsiteNavigation(generation: number, handler: (command: WebsiteCommand) => Promise<void>): () => void
+  commandWebsite(command: WebsiteCommand): void
+  toggleWebsiteNavigation(): void
 }
 
 export interface DuoBridgeProps { readonly bridge: DuoUIBridge }
@@ -135,7 +142,7 @@ function DuoAuthorizationNotice({ bridge, state }: DuoBridgeProps & { readonly s
 export function DuoBrandControl({ bridge }: PropsRuntime<'shell.overlay'> & DuoBridgeProps) {
   const state = useDuo(bridge)
   const rect = state.brandAnchor
-  if (state.mode !== 'harness' || rect === null) return null
+  if (rect === null) return null
   return <div className="dsh-duo-brand-control" aria-label="dsh-duo 模式选择" style={{
     left: rect.left, top: rect.top, width: rect.width, height: rect.height,
   }}>
@@ -145,29 +152,39 @@ export function DuoBrandControl({ bridge }: PropsRuntime<'shell.overlay'> & DuoB
   </div>
 }
 
-/** CHAT's native shell controls. The actual website owns its own conversation navigation. */
-export function DuoChatSidebar({ bridge, collapsed, width }: PropsRuntime<'sidebar'> & DuoBridgeProps) {
+/** Only the middle browsing region changes; the shipped shell and Settings stay mounted. */
+export function DuoChatNavigation({ bridge, wide, expandSidebar }: PropsRuntime<'sidebar.workspaces'> & DuoBridgeProps) {
   const state = useDuo(bridge)
-  return <aside className={`dsh-duo-sidebar${collapsed ? ' dsh-duo-sidebar-collapsed' : ''}`} style={collapsed ? undefined : { width }} aria-label="CHAT 模式控制">
+  const [query, setQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const navigation = state.websiteNavigation
+  const groups = new Map<string, typeof navigation.conversations[number][]>()
+  for (const item of navigation.conversations) {
+    if (!item.title.toLocaleLowerCase().includes(query.toLocaleLowerCase())) continue
+    const rows = groups.get(item.group) ?? []
+    rows.push(item); groups.set(item.group, rows)
+  }
+  return <section className={`dsh-duo-navigation${wide ? '' : ' dsh-duo-navigation-rail'}`} aria-label="官网对话导航">
     <DuoStyles />
-    <div className="dsh-duo-sidebar-chrome" data-window-drag><button type="button" className="dsh-duo-icon-button" onClick={() => bridge.toggleSidebar()} aria-label={collapsed ? '展开模式侧栏' : '收起模式侧栏'}><PanelIcon /></button></div>
-    <div className="dsh-duo-brand"><span className="dsh-duo-mark"><FishLogo size={24} /></span>{!collapsed && <><DuoWordmark /><div className="dsh-duo-brand-chat-control"><DuoModeSelector bridge={bridge} state={state} /><DuoAuthorizationNotice bridge={bridge} state={state} /></div></>}</div>
-    {collapsed ? <DuoModeSelector bridge={bridge} state={state} compact /> : <div className="dsh-duo-website-intro">
-      <span className="dsh-duo-caption">DEEPSEEK CHAT</span>
-      <h2>你的官网对话</h2>
-      <p>聊天、新建对话和历史列表都由 DeepSeek 官网提供。</p>
-      <div className="dsh-duo-note"><strong>在网页中登录</strong><p>网页登录与 DSH 账号登录分别管理。使用同一个网页账号，即可看到官网中的历史。</p></div>
-      <p className="dsh-duo-footnote">切回 HARNESS 会保留当前网页，便于继续编辑草稿或查看回答。</p>
-    </div>}
-    <div className="dsh-duo-spacer" />
-    {!collapsed && <p className="dsh-duo-footnote">网页退出状态暂不能由插件直接观察；官网自身控制聊天登录状态。</p>}
-    <button type="button" className={collapsed ? 'dsh-duo-icon-button' : 'dsh-duo-account-button'} onClick={() => bridge.manageAccount()} title="返回 HARNESS 管理账号" aria-label="返回 HARNESS 管理 DeepSeek 账号">{collapsed ? '⚙' : <><span className="dsh-duo-avatar" aria-hidden="true">D</span><span><strong>{state.accountLabel || 'DeepSeek 账号'}</strong><small>DSH 账号与设置</small></span><span aria-hidden="true">↗</span></>}</button>
-  </aside>
-}
-
-export function DuoChatLeading({ bridge }: PropsRuntime<'shell.leading'> & DuoBridgeProps) {
-  const state = useDuo(bridge)
-  return <div className="dsh-duo-leading"><DuoStyles /><button type="button" className="dsh-duo-icon-button" onClick={() => bridge.toggleSidebar()} aria-label="展开 CHAT 模式侧栏"><PanelIcon /></button><DuoModeSelector bridge={bridge} state={state} /></div>
+    {!wide ? <button type="button" className="dsh-duo-icon-button" onClick={expandSidebar} aria-label="展开官网对话列表"><PanelIcon /></button> : <>
+      <header className="dsh-duo-navigation-header"><span>对话</span><div>
+        <button type="button" className="dsh-duo-icon-button" aria-label="搜索官网对话" onClick={() => setSearching(value => !value)}><svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" stroke="currentColor" strokeWidth="1.4"/><path d="m13 13 4 4" stroke="currentColor" strokeWidth="1.4"/></svg></button>
+        <button type="button" className="dsh-duo-icon-button" aria-label="新建官网对话" disabled={!navigation.canCreate} onClick={() => bridge.commandWebsite({type:'new'})}>＋</button>
+      </div></header>
+      {searching && <input className="dsh-duo-navigation-search" aria-label="搜索已加载的官网对话标题" placeholder="搜索对话" value={query} onChange={event => setQuery(event.target.value)} autoFocus />}
+      <div className="dsh-duo-navigation-list">
+        {navigation.status === 'ready' ? <>
+          {[...groups].map(([label, rows]) => <section key={label} className="dsh-duo-conversation-group" aria-label={label}>
+            <h3>{label}</h3>
+            {rows.map(item => <button key={item.href} type="button" className="dsh-duo-conversation-row" title={item.title} aria-current={navigation.selectedHref === item.href ? 'page' : undefined} onClick={() => bridge.commandWebsite({type:'open',href:item.href})}>{item.title}</button>)}
+          </section>)}
+          {groups.size === 0 && <p className="dsh-duo-navigation-status">{query ? '没有匹配的对话' : '暂无对话'}</p>}
+          {!query && navigation.conversations.length > 0 && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.commandWebsite({type:'more'})}>加载更早的对话</button>}
+        </> : <p className="dsh-duo-navigation-status" role="status">{navigation.status === 'sign-in' ? '请在右侧官网中登录，登录后显示对话列表。' : navigation.status === 'unsupported' ? '暂未识别官网列表，请使用右侧官网导航。' : '正在加载官网对话…'}</p>}
+        {navigation.error && <p className="dsh-duo-navigation-status" role="alert">{navigation.error}</p>}
+      </div>
+    </>}
+  </section>
 }
 
 /** Measures only this plugin's own element; website content lives in the retained overlay. */

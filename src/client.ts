@@ -7,9 +7,10 @@ import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-br
 import { CHAT_PANEL, ModeController } from './core/mode.js'
 import { authorizationSchema, DUO_REMOTE_CONTRIBUTION } from './protocol.js'
 import type { AuthorizationState, DuoClientMetadata } from './protocol.js'
-import { DuoBrandName, DuoBrandControl, DuoChatSidebar, DuoChatLeading, DuoChatPanel } from './ui.js'
+import { DuoBrandName, DuoBrandControl, DuoChatNavigation, DuoChatPanel } from './ui.js'
 import type { DuoUIBridge, DuoViewState, DuoViewportRect } from './ui.js'
 import { DuoWebSurface } from './web-surface.js'
+import { emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from './website-navigation.js'
 
 export const name = 'dsh-duo'
 export const inject = ['slots', 'layout', 'remote']
@@ -41,20 +42,18 @@ export function apply(ctx: Context): void {
   let navigationAttempt = 0
   let viewport: DuoViewportRect | null = null
   let brandAnchor: DuoViewportRect | null = null
+  let websiteNavigation = emptyNavigation()
+  let showWebsiteNavigation = false
+  let navigationHandler: ((command: WebsiteCommand) => Promise<void>) | null = null
   let bridge: DuoUIBridge
   let cached: DuoViewState
   const mode = new ModeController({
     readPanel: () => ctx.layout.panelInfo.getSnapshot().activePanelId,
     selectPanel: panel => { ctx.layout.selectPanel(panel as MainPanelId | null) },
     mountChatNavigation: () => {
-      const cleanup: (() => void)[] = []
-      try {
-        cleanup.push(ctx.slots.register({ name: 'sidebar', priority: -100, inject: () => ({ bridge }) }, DuoChatSidebar))
-        cleanup.push(ctx.slots.register({ name: 'shell.leading', priority: -100, inject: () => ({ bridge }) }, DuoChatLeading))
-      } catch (error) { cleanup.reverse().forEach(stop => stop()); throw error }
-      return () => { cleanup.reverse().forEach(stop => stop()) }
+      return ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -100, inject: () => ({ bridge }) }, DuoChatNavigation))
     },
-    cancelAccount: () => { authorizationGeneration++; webLoading = false; webError = null; publish() },
+    cancelAccount: () => { authorizationGeneration++; webLoading = false; webError = null; websiteNavigation = emptyNavigation(); navigationHandler = null; publish() },
   }, Boolean(nativeBrowser))
   function availability(): string {
     const state = mode.getSnapshot()
@@ -74,14 +73,16 @@ export function apply(ctx: Context): void {
       desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport, brandAnchor,
       accountStorageKey: state.authorization.status === 'authorized' && state.authorization.accountId
         ? `dsh-duo:website:${state.authorization.accountId}` : null,
-      authorizationGeneration, websiteReloadRevision,
+      authorizationGeneration, websiteReloadRevision, websiteNavigation, showWebsiteNavigation,
     }
     for (const listener of listeners) listener()
   }
   function acceptAuthorization(value: AuthorizationState): void {
     const next = authorizationSchema.parse(value)
     const previous = mode.getSnapshot().authorization
-    if (next.accountId !== previous.accountId || next.epoch !== previous.epoch) authorizationGeneration++
+    if (next.accountId !== previous.accountId || next.epoch !== previous.epoch) {
+      authorizationGeneration++; websiteNavigation = emptyNavigation(); navigationHandler = null; showWebsiteNavigation = false
+    }
     connectionError = null
     mode.updateAuthorization(next)
     publish()
@@ -201,6 +202,22 @@ export function apply(ctx: Context): void {
       webLoading = state.loading; webError = state.error; publish()
     },
     reloadWebsite: () => { websiteReloadRevision++; publish() },
+    reportWebsiteNavigation: (generation, value) => {
+      if (disposed || generation !== authorizationGeneration) return
+      try { websiteNavigation = parseWebsiteNavigation(value) } catch { websiteNavigation = { ...emptyNavigation(), status: 'unsupported' } }
+      publish()
+    },
+    bindWebsiteNavigation: (generation, handler) => {
+      if (generation !== authorizationGeneration) return () => {}
+      navigationHandler = handler
+      return () => { if (navigationHandler === handler) navigationHandler = null }
+    },
+    commandWebsite: command => {
+      if (disposed || mode.getSnapshot().mode !== 'chat' || !mode.canEnter() || !navigationHandler) return
+      if (command.type === 'open' && !websiteNavigation.conversations.some(item => item.href === command.href)) return
+      void navigationHandler(command)
+    },
+    toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },
   }
   publish()
   // The enclosing effect's final cleanup restores navigation before registered main keys disappear.

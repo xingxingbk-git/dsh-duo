@@ -10,7 +10,7 @@
 
 ## 产品与数据来源
 
-CHAT 直接呈现 `https://chat.deepseek.com/`，由网站自行处理登录、会话和服务器历史。插件不实现另一个模型聊天服务，不缓存/合并网页历史。DSH 原生重绘网站历史需要官方第三方接口，目前未发现。
+CHAT 直接呈现 `https://chat.deepseek.com/`，由网站自行处理登录、会话和服务器历史。插件不实现另一个模型聊天服务，不持久化/合并网页历史。用户2026-10-10允许有限DOM适配，当前在原DSH侧栏镜像已加载的官网导航元数据；这是界面适配，不是官方历史API。
 
 DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面处理。两者没有公开身份匹配或登出通知桥。DSH 登出即时回 Harness 的实现不等于网页内部登出已联动。
 
@@ -37,8 +37,9 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 - `main` 自有键 `dsh-duo.chat`。独立 main 按官方布局自然隐藏 Harness 右栏；退出先恢复原 panel，再 dispose Chat 覆盖项。
 - Harness侧栏/navigation原树保留；`sidebar.brand.name`仅替换装饰内容：官方DeepSeek字标（自有SVG视口裁掉HARNESS徽标）及自有锚点。实际按钮是官方additive `shell.overlay` 的独立组件，ref/ResizeObserver/IntersectionObserver只测自己的元素；不查改核心DOM，不复制/包装未导出的SidebarRoot。
 - 品牌owner的aria-hidden/外层New Session仍存在，交互层在该祖先外，提供按键与屏幕阅读器语义。rc.2品牌行24px且会裁剪，锚点为112×24px；完全可见才发布矩形，折叠/裁剪时隐藏，重新可见时恢复。底部和右下角旧入口已移除；正常授权无常驻刷新，故障时在顶部说明并重试。Mac实测通过，Web/Windows外层按钮及其他平台仍需实测。
-- CHAT时才shadow `sidebar` 与macOS折叠 `shell.leading`，离开后dispose恢复原occupant；自己的CHAT品牌区内置可交互选择器。
-- 原新建快捷键没有完整公开模式拦截，保留原行为。监听主面板离开 CHAT 后清理覆盖，不改写原导航选择；不能保证此路径原 Session 没有被新建动作替换。
+- 两种模式共用原生SidebarRoot及shell.leading。仅CHAT期间通过slots.inject注册 `sidebar.workspaces`，退出后dispose恢复工作区；owner仅wide/expandSidebar。顶部窗口/品牌/新会话视觉、底部真实settings及背景透明/模糊由原组件持续管理，不创建另一套侧栏。
+- Mac折叠时main扩展至窗口左沿，保活网页层会覆盖原shell.leading。品牌锚点不可见时，网页工具条通过公开layout.toggleSidebar提供展开入口和备用模式按钮；展开后撤回备用控件，不改原shell.leading注册。
+- 原顶部新会话按钮、菜单与快捷键调用私有注入的uiWorkspace.startSession，没有公开模式替换回调，保留HARNESS行为；CHAT新建使用列表标题旁的＋操作官网。监听主面板离开CHAT后清理覆盖，不改写原导航选择；不能保证原新建路径的Session保真。此限制仍未解决，不能声称顶部按钮已统一CHAT语义。
 - 所有注册与 stream 都由 Cordis enclosing effect 管理，末尾清理先恢复 panel，再卸载贡献和 guest。完整 Desktop 卸载恢复还需真实验收。
 
 证据：ui-layout/src/client/service.ts:18–49、AppFrame.tsx:40–42；ui-sidebar/src/client/index.ts:65–99、SidebarRoot.tsx:223–249,304–310；ui-slots/src/index.ts:1241–1246；shortcuts/src/client/native.ts:17–30。
@@ -49,7 +50,7 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 1. 申请受主进程批准的 lease/partition。
 2. React 在自己的 Slot 组件树创建 `<webview name=lease partition=批准值 src=about:blank#lease>`。
-3. 首次 dom-ready 调用公开原生 `loadURL('https://chat.deepseek.com/')`。不执行网页脚本或读取 DOM/秘密。
+3. 首次dom-ready调用公开原生loadURL加载官网；后续使用Electron公开executeJavaScript运行下述用户允许的有限界面适配，不读取秘密。
 4. 网页长期挂载在自己的 additive shell.overlay。自己的 main 占位元素通过 ref/ResizeObserver 报告自身矩形，容器定位到主区；不查询或修改 DSH 核心元素。
 5. 手动返回 Harness 只隐藏容器；再次进入仍是同一文档。授权代次变化、账号变化或插件卸载释放 guest；异步 acquire 若已被取消则立即 release。
 
@@ -58,6 +59,16 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 主进程校验 lease 并强制 `sandbox:true`、`contextIsolation:true`、`webSecurity:true`、`nodeIntegration:false`。插件不改安装包、header 或安全配置。Browser storage 按插件指定的安全账号隔离身份管理，但实际网页登录身份不可验证；内存分区仅存续当前进程，不共享系统浏览器凭据。
 
 证据：ui-sidebar-browser/src/types.ts:19–26、ElectronWebviewPresentation.ts:52–60；apps/desktop/src/preload-browser.ts:7–31、main.ts:229–235、browser-guests.ts:29–41,72–95。原生 Platform View 只支持 usage/top-up，不用于任意 Chat URL。
+
+## 官网导航适配（W015 / 0.1.1）
+
+`src/website-navigation.ts`为自包含DOM适配函数，经Electron公开webview.executeJavaScript仅在插件持有的批准guest执行。限定HTTPS官方origin及已在页面出现的 `/a/chat/s/<id>` 链接，读取标题/分组/选中路径，不访问正文、Cookie、storage、应用私有全局、凭据或请求接口。没有额外依赖、preload或安全策略修改。
+
+网页导航以窄列几何、真实历史链接、新对话标签及不含编辑器等条件定位；原生列表按页面次序分组，可搜索已加载标题，点击真实页面链接/新建元素，加载更早时滚动原网页列表。承接成功才加入可撤回的局部style隐藏网页侧栏；用户可通过工具条“官网导航”恢复原页面账号/搜索/管理入口。没有项目创建、假历史或另一份聊天数据。页面结构变化或出错清空镜像、撤回隐藏样式并提示使用官网原导航。
+
+每1.2秒串行刷新可见导航，HARNESS期间不执行适配；卸载/授权代次变化撤回动作绑定和guest。Client同时限定模式/门槛/代次及已加载链接，旧账号回包不能污染新列表。网页返回payload按非信任输入过滤origin、大小和类型，标题仅作React文本。登录页路径只能说明页面在登录视图，不证明DSH授权失效或两处账号相同，不自动回HARNESS。
+
+当前适配已在Mac真实官网确认分组列表、选择联动和＋新建；空账号/官网布局变化、动态加载更多与网页内部账号切换仍需扩展实测。公开webview方法文档及固定Sidebar owner契约见references。
 
 ## 构建与边界
 

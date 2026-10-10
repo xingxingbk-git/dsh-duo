@@ -124,7 +124,7 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
   const bridge = registrations.get(`main:${CHAT_PANEL}`)!.inject().bridge
   let cleaned = false
   return {
-    bridge, order, requests, panel: () => panel,
+    bridge, order, requests, panel: () => panel, registrations: () => [...registrations.keys()],
     async ready() { await flush(); await Promise.all(setup); await flush() },
     emit(value: AuthorizationState, aborted = false) {
       const controller = new AbortController()
@@ -147,6 +147,49 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
     },
   }
 }
+
+test('Chat swaps only the middle slot and disposes it without replacing native sidebar controls', async () => {
+  const h = harness()
+  try {
+    await h.ready()
+    h.requests[0].resolve({ok:true,value:authorized()}); await flush()
+    h.bridge.selectMode('chat'); await flush()
+    h.requests[1].resolve({ok:true,value:authorized()}); await flush()
+    assert(h.registrations().includes('sidebar.workspaces:'))
+    assert(!h.registrations().includes('sidebar:'))
+    assert(!h.registrations().includes('shell.leading:'))
+    assert(!h.registrations().includes('sidebar.settings:'))
+    h.bridge.selectMode('harness'); await flush()
+    assert(!h.registrations().includes('sidebar.workspaces:'))
+    assert(h.registrations().includes('sidebar.brand.name:'))
+    assert.equal(h.panel(),'plugins')
+  } finally { await h.dispose() }
+})
+
+test('website list and action binding are invalidated at account change and late guest replies are ignored', async () => {
+  const h = harness()
+  try {
+    await h.ready()
+    h.requests[0].resolve({ok:true,value:authorized()}); await flush()
+    h.bridge.selectMode('chat'); await flush()
+    h.requests[1].resolve({ok:true,value:authorized()}); await flush()
+    const generation = h.bridge.getSnapshot().authorizationGeneration
+    const href = 'https://chat.deepseek.com/a/chat/s/fixture-a'
+    h.bridge.reportWebsiteNavigation(generation, {status:'ready',conversations:[{href,title:'Fixture A',group:'置顶'}],selectedHref:href,canCreate:true,error:null})
+    let called = 0
+    h.bridge.bindWebsiteNavigation(generation, async () => { called++ })
+    h.bridge.commandWebsite({type:'open',href:'https://example.com/'}); await flush()
+    assert.equal(called,0)
+    h.bridge.commandWebsite({type:'open',href}); await flush()
+    assert.equal(called,1)
+    h.emit(authorized('B','grant-b')); await flush()
+    assert.equal(h.bridge.getSnapshot().websiteNavigation.conversations.length,0)
+    h.bridge.reportWebsiteNavigation(generation,{status:'ready',conversations:[{href,title:'stale',group:'置顶'}]})
+    h.bridge.commandWebsite({type:'new'}); await flush()
+    assert.equal(called,1)
+    assert.equal(h.bridge.getSnapshot().websiteNavigation.conversations.length,0)
+  } finally { await h.dispose() }
+})
 
 test('a late valid HTTP snapshot cannot reopen the Client gate after stream sign-out', async () => {
   const h = harness()
