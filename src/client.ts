@@ -42,6 +42,18 @@ export function apply(ctx: Context): void {
   let webError: string | null = null
   let connectionError: string | null = null
   let navigationAttempt = 0
+  let settingsViewport: DshChatViewportRect | null = null
+  let settingsReadRequested=false
+  let preferenceError: string | null = null
+  let preferences: {language:string} | null = null
+  let preferenceForm: import('@deepseek-ai/dsh-client-ui-settings/client').ConfigForm<{language:string}> | null = null
+  let preferencesGeneration = -1
+  let restoringPreferences = false
+  let restorationSeen = false
+  let websiteSignedOut = false
+  let logoutRequested = false
+  let websiteHadSession = false
+  const pendingPreferences = new Map<string,string>()
   let viewport: DshChatViewportRect | null = null
   let brandAnchor: DshChatViewportRect | null = null
   let sidebarAdapted: boolean | null = null
@@ -67,16 +79,17 @@ export function apply(ctx: Context): void {
     if (state.authorization.status === 'pending') return '正在确认 DSH 的 DeepSeek 账号授权。'
     if (state.authorization.status === 'unauthorized') return '请先在 Harness 中登录并授权 DeepSeek 账号，确认后即可使用 CHAT。'
     if (state.authorization.status === 'unavailable') return '暂时无法确认 DSH 账号授权，请检查网络后刷新。'
+    if (websiteSignedOut) return '官网已退出，请在 CHAT设置中重新登录。'
     return '真实 DeepSeek 网页；网页登录与 DSH 授权分别处理。'
   }
   function publish(): void {
     if (disposed) return
     const state = mode.getSnapshot()
     cached = {
-      mode: state.mode, modeEnabled: mode.canEnter(), authorizationStatus: state.authorization.status,
+      mode: state.mode, modeEnabled: mode.canEnter() && !websiteSignedOut, authorizationStatus: state.authorization.status,
       availabilityMessage: availability(), accountLabel: state.authorization.status === 'authorized' ? 'DSH 账号已授权' : null,
       error: state.error ?? connectionError ?? (state.authorization.error ? 'DSH 账号状态刷新遇到网络或服务问题。' : null),
-      desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport, brandAnchor, sidebarAdapted,
+      desktopAvailable: Boolean(nativeBrowser), webLoading, webError, settingsViewport, preferenceError, viewport, brandAnchor, sidebarAdapted,
       accountStorageKey: state.authorization.status === 'authorized' && state.authorization.accountId
         ? `dsh-chat:website:${state.authorization.accountId}` : null,
       authorizationGeneration, websiteReloadRevision, websiteNavigation, showWebsiteNavigation,
@@ -88,7 +101,7 @@ export function apply(ctx: Context): void {
     const next = authorizationSchema.parse(value)
     const previous = mode.getSnapshot().authorization
     if (next.accountId !== previous.accountId || next.epoch !== previous.epoch) {
-      authorizationGeneration++; websiteNavigation = emptyNavigation(); navigationHandler = null; showWebsiteNavigation = false
+      authorizationGeneration++; websiteNavigation = emptyNavigation(); navigationHandler = null; showWebsiteNavigation = false;websiteSignedOut=false;logoutRequested=false;websiteHadSession=false;preferencesGeneration=-1
     }
     connectionError = null
     mode.updateAuthorization(next)
@@ -185,6 +198,7 @@ export function apply(ctx: Context): void {
     selectMode: selected => {
       const attempt = ++navigationAttempt
       if (selected === 'harness') { mode.select('harness'); return }
+      if (websiteSignedOut) return
       const requestedAccount = mode.getSnapshot().authorization
       void refreshAuthorization().then(() => {
         const currentAccount = mode.getSnapshot().authorization
@@ -213,25 +227,76 @@ export function apply(ctx: Context): void {
     reportWebsiteNavigation: (generation, value) => {
       if (disposed || generation !== authorizationGeneration) return
       try { websiteNavigation = parseWebsiteNavigation(value) } catch { websiteNavigation = { ...emptyNavigation(), status: 'unsupported' } }
+      if ((logoutRequested || websiteHadSession) && websiteNavigation.status === 'sign-in') { logoutRequested=false;websiteHadSession=false;websiteSignedOut=true;mode.select('harness') }
+      if (websiteNavigation.status === 'ready') { websiteHadSession=true;websiteSignedOut=false }
+      restorePreferences()
+      readSettingsWhenReady()
+      const settings = websiteNavigation.settings
+      if (restoringPreferences && settings?.restored===false) restorationSeen=true
+      if (restorationSeen && settings?.restored && !settings.pending) restoringPreferences=false
+      if (!restoringPreferences && settings?.restored && !settings.pending && !settings.error) {
+        const language=/中文|Chinese/i.test(settings.language ?? '') ? 'zh-CN' : /English|英语/i.test(settings.language ?? '') ? 'en' : /^(System|跟随系统|系统|Follow system)$/i.test(settings.language ?? '') ? 'system' : ''
+        if (language) persistPreference('language',language)
+      }
       publish()
     },
     bindWebsiteNavigation: (generation, handler) => {
       if (generation !== authorizationGeneration) return () => {}
       navigationHandler = handler
+      restorePreferences()
+      readSettingsWhenReady()
       return () => { if (navigationHandler === handler) navigationHandler = null }
     },
     commandWebsite: command => {
-      if (disposed || mode.getSnapshot().mode !== 'chat' || !mode.canEnter() || !navigationHandler) return
+      if (disposed || (mode.getSnapshot().mode !== 'chat' && !settingsViewport) || !mode.canEnter() || !navigationHandler) return
       if (command.type === 'open' && !websiteNavigation.conversations.some(item => item.href === command.href)) return
       // Native settings needs the adapter's multi-step command to stay active;
       // restoring the original navigation would cancel it at the next poll.
-      if (command.type==='settings-read' || command.type==='settings-open' || command.type==='setting') {
+      if (command.type==='settings-read' || command.type==='setting' || command.type==='preferences' || command.type==='logout') {
         showWebsiteNavigation=false; publish()
       }
       void navigationHandler(command)
     },
     toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },
+    updateSettingsViewport: next => {
+      if (settingsViewport?.left===next?.left && settingsViewport?.top===next?.top && settingsViewport?.width===next?.width && settingsViewport?.height===next?.height) return
+      const opening = !settingsViewport && !!next
+      if(opening) settingsReadRequested=false
+      settingsViewport=next;publish()
+      if(!next && navigationHandler) void navigationHandler({type:'settings-close'})
+      else readSettingsWhenReady()
+    },
+    logoutWebsite: () => {logoutRequested=true;bridge.commandWebsite({type:'logout'})},
   }
+  function readSettingsWhenReady(): void {
+    if(!settingsViewport || !navigationHandler || websiteNavigation.status!=='ready' || settingsReadRequested) return
+    settingsReadRequested=true
+    void navigationHandler({type:'settings-read'})
+  }
+  function restorePreferences(): void {
+    if (!preferences || !navigationHandler || websiteNavigation.status!=='ready' || preferencesGeneration===authorizationGeneration) return
+    preferencesGeneration=authorizationGeneration;restoringPreferences=!!preferences.language;restorationSeen=false
+    void navigationHandler({type:'preferences',...preferences})
+  }
+  function persistPreference(key:'language', value:string): void {
+    if (!preferenceForm || !preferences || preferences[key]===value || pendingPreferences.get(key)===value) return
+    pendingPreferences.set(key,value)
+    void preferenceForm.set(key,value).then(accepted=>{if(!accepted) throw new Error('refused');preferenceError=null},()=>{preferenceError='CHAT偏好未能保存，请检查DSH设置连接。'}).catch(()=>{preferenceError='CHAT偏好未能保存，请检查DSH设置连接。'}).finally(()=>{if(pendingPreferences.get(key)===value) pendingPreferences.delete(key);publish()})
+  }
+  ctx.inject(['configForms'], child => {
+    child.effect(() => {
+      const form=child.configForms.get<{language:string}>('dsh-chat')
+      preferenceForm=form
+      const read=()=>{
+        const snapshot=form.getSnapshot()
+        if(snapshot.status==='ready' && snapshot.value){preferences=snapshot.value;preferenceError=snapshot.writable===false ? '当前DSH连接不能持久保存CHAT偏好。' : null;restorePreferences()}
+        else if(snapshot.status==='unavailable') preferenceError='DSH未提供CHAT偏好配置，当前修改不能跨重启保存。'
+        publish()
+      }
+      const stop=form.subscribe(read);read()
+      return ()=>{stop();preferenceForm=null;preferences=null}
+    })
+  })
   sidebar = createSidebarBinding(() => {
     const state = mode.getSnapshot()
     return { chat: state.mode === 'chat', canCreate: mode.canEnter() && websiteNavigation.canCreate }

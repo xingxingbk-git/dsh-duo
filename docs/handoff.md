@@ -1,6 +1,59 @@
 # 当前状态与开发接力
 
-更新日期：2026-10-10（Asia/Shanghai）。当前轮次W018，插件统一名称dsh-chat，版本0.1.4。单Agent Codex/macOS，基线main=39cce8b（W017已由用户提交）。当前仓库目录/SSH地址同为新名称；源码仅本地改动，无自动提交/推送；用户已明确授权后，本机DSH迁移安装与图标实机验收完成。
+更新日期：2026-10-10（Asia/Shanghai）。W019 / **0.1.5本地验收候选**，单Agent Codex/macOS，无并行Agent。本轮工作收尾交还用户；main基线0df604f，0.1.4→0.1.5已递增一次，同轮调试不再涨号。不stage/commit/push。实际目录/仓库为/Users/ui/Downloads/dsh-chat、git@github.com:xingxingbk-git/dsh-chat.git。
+
+## 当前目标与范围
+
+用户最新取消四Tab官网设置嵌入，本轮CHAT设置仅保留官网账号昵称、当前会话退出、系统语言。不得继续实现语音、数据、安全和协议页。两种模式共用原侧栏；标题/分享统一48px顶行，展开24px左距，折叠按自有leading右缘加16px横向避让，不加第二行。
+
+网页登录跨重启保持仍是原需求，**尚未修复**：rc.2及核查时master公开Browser只生成随机内存partition，需要上游公开持久会话能力。不要迁移Cookie/token/storage或改DSH安装包；见browser-session-capability.md。
+
+## 当前任务
+
+| 任务 | 完成与可信证据 | 未完成/下一步 |
+| --- | --- | --- |
+| T02/T03/T05 | 原生settings.section、官方volatile Config/configForms、Host ESM/Client lazy-CJS；类型/构建/32项回归通过 | 新设备按目标版本重新核查，不沿用本机运行状态 |
+| T06/T08 | 精简设置真实账号/语言读写；中文暗色页面；标题/分享展开折叠同顶行实机截图通过 | 其他窗口尺寸/平台与长标题扩测；完整四Tab已取消 |
+| T07 | 显式当前退出与官网曾ready后sign_in回HARNESS禁用；Client与公开DOM回归通过 | 未实际登出当前用户；不以“登出所有设备”代替 |
+| T09/T15 | 跟随系统→中文→英文→中文均由官网读回；desktop cordis.patch.yml本插件language=zh-CN落盘确认；重开设置读回中文 | 彻底退出应用后的偏好恢复未复验；偏好保存不证明认证持久化 |
+| T14 | Browser持久化缺口已写本地上游提案 | 登录重启保持未修复；未发送上游issue/PR |
+| T12/T13 | 用户新SVG未覆盖，最终包/安装核对见下；全部上下文同步最新范围和真实失败 | 用户先验收并自行提交/推送；尚未跨设备同步 |
+
+## 实现与回归原因
+
+website-settings.ts只承接公开头像菜单→General→语言、固定暗色和当前会话退出。原生UI只有昵称/登录状态、退出按钮、语言选择；无四Tab、语音或跳转/重载按钮。登录页仍由官网处理。后台guest保持正常viewport，visibility/opacity/pointer-events隐藏并位于原生设置层之后；移到屏幕外的尝试已撤回。
+
+重写回归的具体原因：rowFor增加文本长度条件后爬升到整个General，组合CSS选择器按DOM顺序选中Light；语言选项又被限制为特定menu容器，丢失原版本独立portal兼容。对照HEAD恢复原rowFor/全局公开选项查找，ds-select优先。实机还发现旧dark-complete在失败后仍被保留，导致中文生效但浅色未纠正；现在仅成功确认暗色才完成，恢复偏好/写语言会重新确认固定暗色。不要把错误完成标记当作真实值。
+
+website-header.ts只匹配已从导航取得的选中标题，不读取正文。官网实际顶栏含三个图标按钮，分享可能无aria-label，按有界顶行最右侧SVG按钮识别；标题必须匹配直接显示文字的叶元素，覆盖原内层居中/截断宽度。原分享控件只调整位置，未调用分享。48px同一顶行，分享右距12px；web-surface侧栏宽度变化主动同步自有leading几何。
+
+## 已执行验证
+
+- pnpm test：32/32；typecheck/build与lazy产物契约通过。覆盖授权、代次、卸载恢复、偏好先恢复后保存、显式/观测网页退出等。
+- scripts/check-website-settings-browser.mjs：15/15浏览器公开DOM夹具通过。覆盖头像、真实读写/恢复、邻近Light与独立label portal、暗色陈旧完成标记/失败期限、当前退出及危险动作不触发、标题叶元素/三图标/展开折叠几何/新对话撤回；全部虚构资料，不等同于实机登出。
+- 官方CLI/runtime pnpm11 ignore-scripts多次安装均exit0，泛化peer warning保留；每次使用唯一内容hash包名，核对安装Client，不以CLI返回替代运行验证。最终产物与源码安装结果见下方收尾核对。
+- CUA实机：官网昵称正常、设置读回“跟随系统”；选择中文后官网分组/编辑器中文；最终无诊断包中文→English→中文请求完成且实际值读回，Config独立读取为zh-CN。暗色页面实机确认；选已有对话，展开标题主区靠左、折叠避让原生展开/新建，两者与分享都在同一顶部高度。
+- 本机截图仅/tmp，不入Git：dsh-chat-0.1.5-settings.png、dsh-chat-0.1.5-expanded.png、dsh-chat-0.1.5-collapsed.png。用户SVG 2511 bytes，SHA256 ad1b0fda90c1c1f2a0b9208bc86f5fe8c21d505a1208576be4e3110b26b4f79c，未覆盖。
+- 未发送消息、生成分享、修改绑定/安全/隐私、删除/导出、登出所有设备或实际登出当前用户；发送/流式/跨端/完整卸载及其他平台矩阵未因此完成。
+
+## 最终产物核对
+
+唯一最终包：artifacts/dsh-chat-0.1.5-1d5ab1718f12.tgz（通用0.1.5.tgz内容相同），19个白名单文件，SHA256 1d5ab1718f12d556609af458226111df8d3fd2b685cf5a6e4f1780422f3ea81f。早先同版本候选/诊断包均不可发布。
+
+Host SHA256 54ce12fc064ab75443a02a77a38403e0b0e9389a3b210585412de6ddfa3b8850；Client e960add12ea53d1d8d6063116f8ad3e125ece45e32e43706979e862d05a287b5。打包与源码lib、已安装运行代码及SVG逐字节相同；最终README收尾后再次打包，未重复涨号。最终包官方CLI已安装exit0，19个白名单文件与实际node_modules逐项相同。更新时已打开的设置出现旧页面引用/连接状态；关闭设置、进入CHAT后重开，真实账号与中文正常读回。不要为仅此热更新状态要求用户重启/重登录。
+
+最终源码由DSH内置pnpm11.7.0隔离Git安装通过，允许准确临时fixture Git身份后prepare实际构建、Host导入/lazy Client契约均通过；prepare内层按packageManager使用10.33.2，esbuild脚本批准提示保留。未创建项目Git提交。git diff --check通过，诊断关键字扫描无匹配（rg exit1表示没有匹配），非构建失败。
+
+## 下一步
+
+1. 用户查看本机精简CHAT设置和展开/折叠布局，验收后自行Git提交/推送；另一设备拉取用户提交才获得本轮成果。
+2. 下一轮若验收当前退出：只用此会话头像菜单退出，确认回HARNESS并禁用，再由用户正常官网登录；不强制为了本轮收尾反复登录。
+3. 如需彻底重启验证语言恢复，先说明现有Browser会话无法保持，需要用户再次登录；不要报告网页登录持久化已解决。
+4. 上游持久会话能力和未来完整设置分别独立评估，不重走本轮已取消的四Tab方案。
+
+# W018历史交接记录
+
+以下W018是已完成历史快照：单Agent Codex/macOS，基线main=39cce8b（W017已由用户提交）。当前仓库目录/SSH地址同为新名称；源码仅本地改动，无自动提交/推送；用户已明确授权后，本机DSH迁移安装与图标实机验收完成。
 
 ## 本轮目标与范围
 

@@ -25,6 +25,7 @@ let sidebarCollapsed = false
 let websiteReloadRevision = 0
 let webLoading = false
 let webError: string | null = null
+let settingsViewport: DshChatViewportRect | null = null
 let viewport: DshChatViewportRect | null = null
 let brandAnchor: DshChatViewportRect | null = null
 let sidebarAdapted: boolean | null = null
@@ -97,7 +98,7 @@ function publish(): void {
     mode: state.mode, modeEnabled: controller.canEnter(), authorizationStatus: state.authorization.status,
     availabilityMessage: authorized ? '开发模拟：DSH 账号授权有效，网页容器不联网。' : '开发模拟：请使用上方按钮确认 DSH 账号授权。',
     accountLabel: authorized ? `模拟账号 ${state.authorization.accountId}` : null,
-    error: state.error ?? (state.authorization.error ? '开发模拟：授权检查失败，请重试。' : null), desktopAvailable: true, webLoading, webError, viewport, brandAnchor, sidebarAdapted,
+    error: state.error ?? (state.authorization.error ? '开发模拟：授权检查失败，请重试。' : null), desktopAvailable: true, webLoading, webError, settingsViewport, preferenceError:null, viewport, brandAnchor, sidebarAdapted,
     accountStorageKey: authorized && state.authorization.accountId ? `preview:website:${state.authorization.accountId}` : null,
     authorizationGeneration, websiteReloadRevision, websiteNavigation, showWebsiteNavigation,
   }
@@ -121,6 +122,7 @@ function sameAccountRefresh(): void {
 }
 
 const bridge: DshChatUIBridge = {
+  updateSettingsViewport: next=>{settingsViewport=next;publish()}, logoutWebsite:()=>bridge.commandWebsite({type:'logout'}),
   getSnapshot: () => cached,
   subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
   selectMode: mode => { controller.select(mode) },
@@ -151,8 +153,8 @@ const bridge: DshChatUIBridge = {
   reportWebsiteNavigation: (generation, value) => { if (generation === authorizationGeneration) { websiteNavigation = parseWebsiteNavigation(value); publish() } },
   bindWebsiteNavigation: (generation, handler) => { navigationHandler = handler; return () => { if (navigationHandler === handler) navigationHandler = null } },
   commandWebsite: command => {
-    if (cached.mode !== 'chat' || !cached.modeEnabled) return
-    if (command.type==='settings-read' || command.type==='settings-open' || command.type==='setting') {showWebsiteNavigation=false;publish()}
+    if ((cached.mode !== 'chat' && !settingsViewport) || !cached.modeEnabled) return
+    if (command.type==='settings-read' || command.type==='setting') {showWebsiteNavigation=false;publish()}
     void navigationHandler?.(command)
   },
   toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },

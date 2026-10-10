@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { createElement, useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
@@ -18,6 +19,10 @@ interface ReservationState {
   readonly native: DesktopBrowserReservation
   readonly generation: number
   readonly storageKey: string
+}
+
+function headerInset(viewport: {readonly left:number} | null): number {
+  return viewport?.left===0 ? Math.max(24,Math.ceil(document.querySelector('.dsh-chat-leading')?.getBoundingClientRect().right ?? 144)+16) : 24
 }
 
 /** Read only the product's documented origin-scoped Browser capability. */
@@ -46,12 +51,12 @@ export function DshChatWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell
   const lastReload = useRef(state.websiteReloadRevision)
 
   useEffect(() => {
-    if (state.mode === 'chat' && state.modeEnabled && state.authorizationStatus === 'authorized') {
+    if ((state.mode === 'chat' && state.modeEnabled || state.settingsViewport) && state.authorizationStatus === 'authorized') {
       setRequestedGeneration(state.authorizationGeneration)
       if (previousMode.current === 'harness' && needsRecovery.current) setRecoveryRevision(value => value + 1)
     }
     previousMode.current = state.mode
-  }, [state.mode, state.modeEnabled, state.authorizationStatus, state.authorizationGeneration])
+  }, [state.mode, state.modeEnabled, state.authorizationStatus, state.authorizationGeneration, state.settingsViewport])
 
   useEffect(() => {
     let stopped = false
@@ -116,27 +121,29 @@ export function DshChatWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell
     }
     const adapt = async (command: WebsiteCommand) => {
       const snapshot = bridge.getSnapshot()
-      if (events.signal.aborted || snapshot.authorizationGeneration !== generation || snapshot.mode !== 'chat'
-        || !snapshot.modeEnabled || snapshot.authorizationStatus !== 'authorized') return
+      if(command.type==='snapshot') command={...command,headerInset:headerInset(snapshot.viewport)}
+      if (events.signal.aborted || snapshot.authorizationGeneration !== generation || (snapshot.mode !== 'chat' && !snapshot.settingsViewport)
+        || (!snapshot.modeEnabled && !snapshot.settingsViewport) || snapshot.authorizationStatus !== 'authorized') return
       try {
-        if (!current.getURL().startsWith('https://chat.deepseek.com/')) return
+        if(!current.getURL().startsWith('https://chat.deepseek.com/')) return
         const result = parseWebsiteNavigation(await execute(command))
         if (!events.signal.aborted) { bridge.reportWebsiteNavigation(generation, result); setPresentationReady(result.status !== 'loading') }
       } catch {
         if (!events.signal.aborted) {
           bridge.reportWebsiteNavigation(generation, { ...emptyNavigation(), status: 'unsupported' })
-          setPresentationReady(true)
+          setPresentationReady(!snapshot.settingsViewport)
           try { await execute({type:'restore'}) } catch { /* The next ready event retries a recovered guest. */ }
         }
       }
     }
+    const snapshotCommand = (): WebsiteCommand => {const snapshot=bridge.getSnapshot();return {type:'snapshot',showOriginal:snapshot.showWebsiteNavigation, headerInset:headerInset(snapshot.viewport)}}
     const syncNavigation = () => {
       if (reading || events.signal.aborted) return
       reading = true
-      queued = queued.then(() => adapt({ type: 'snapshot', showOriginal: bridge.getSnapshot().showWebsiteNavigation })).finally(() => { reading = false })
+      queued = queued.then(() => adapt(snapshotCommand())).finally(() => { reading = false })
     }
     const stopCommands = bridge.bindWebsiteNavigation(generation, command => {
-      queued = queued.then(() => adapt(command)).then(() => adapt({type:'snapshot',showOriginal:bridge.getSnapshot().showWebsiteNavigation}))
+      queued = queued.then(() => adapt(command)).then(() => adapt(snapshotCommand()))
       return queued
     })
     const timer = setInterval(syncNavigation, 1200)
@@ -200,18 +207,29 @@ export function DshChatWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell
     }
   }, [bridge, nativeBrowser, reservation, state.websiteReloadRevision, state.modeEnabled, state.authorizationStatus])
 
+  useEffect(() => {
+    if(state.mode==='chat' && state.viewport) bridge.commandWebsite({type:'snapshot',showOriginal:state.showWebsiteNavigation,headerInset:headerInset(state.viewport)})
+  }, [bridge,state.mode,state.viewport?.left])
+
   useEffect(() => () => { guestEvents.current?.abort() }, [])
 
-  const rect = state.viewport
-  const visible = state.mode === 'chat' && state.modeEnabled && state.authorizationStatus === 'authorized' && rect !== null
+  const inSettings = state.settingsViewport !== null
+  const rect = inSettings && state.websiteNavigation.status!=='sign-in' ? {left:0,top:0,width:globalThis.innerWidth,height:globalThis.innerHeight} : state.settingsViewport ?? state.viewport
+  const visible = (inSettings && state.websiteNavigation.status==='sign-in' || !inSettings && state.mode === 'chat' && state.modeEnabled) && state.authorizationStatus === 'authorized' && rect !== null
   const activeReservation = reservation !== null && reservation.generation === state.authorizationGeneration
     && reservation.storageKey === state.accountStorageKey ? reservation : null
-  return <section className="dsh-chat-web-surface" aria-label="DeepSeek 官网网页" aria-hidden={!visible} style={{
-    display: visible ? 'flex' : 'none',
+  const clearance = 0
+  return createPortal(<section id="dsh-chat-website-surface" className="dsh-chat-web-surface" aria-label="DeepSeek 官网网页" aria-hidden={!visible} style={{
+    zIndex: inSettings ? (visible ? 1001 : 0) : 14,
+    visibility: visible ? 'visible' : 'hidden',
+    display: (inSettings || state.mode==='chat') && rect ? 'flex' : 'none',
+    opacity: visible ? 1 : 0,
+    pointerEvents: visible ? 'auto' : 'none',
     left: rect?.left ?? 0,
-    top: `calc(${rect?.top ?? 0}px + var(--dsh-frame-top-clearance, 0px))`,
+    top: (rect?.top ?? 0) + clearance,
     width: rect?.width ?? 0,
-    height: `calc(${rect?.height ?? 0}px - var(--dsh-frame-top-clearance, 0px))`,
+    height: Math.max(0,(rect?.height ?? 0) - clearance),
+    borderRadius: inSettings ? 12 : 0, overflow: 'hidden',
   }}>
     <DshChatStyles />
     <div className="dsh-chat-web-content">
@@ -230,8 +248,8 @@ export function DshChatWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell
       {(nativeBrowser === undefined || state.webError !== null || activeReservation === null || !presentationReady) && <div className={`dsh-chat-web-status${state.webError !== null ? ' dsh-chat-web-status-error' : ''}`} role={state.webError !== null ? 'alert' : 'status'}>
         <strong>{nativeBrowser === undefined ? '当前环境无法内嵌网页' : state.webError !== null ? '网页暂时无法使用' : '正在打开 DeepSeek 官网'}</strong>
         <p>{state.webError || (nativeBrowser === undefined ? '需要提供官方浏览器能力的 DSH 桌面版。' : '网页登录后，由官网显示该账号的聊天和历史。')}</p>
-        {state.webError !== null && <button type="button" className="dsh-chat-text-button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled}>重试网页</button>}
+        {(state.webError !== null) && <button type="button" className="dsh-chat-text-button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled}>重试网页</button>}
       </div>}
     </div>
-  </section>
+  </section>, document.body)
 }

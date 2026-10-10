@@ -128,3 +128,12 @@ Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可�
 
 - [固定rc.2 Plugin display metadata](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/cookbook/adding-a-package.md#plugin-display-metadata)及[固定app-boot元数据说明](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/app-boot/README.md#reading-plugin-display-metadata)：已读取正文，package.json需通过exports可见，icon为相对文件路径且包含在files中；支持自包含SVG、不超过256 KiB。manifest图标适配管理列表，不替换产品品牌。官方master另有./icon支持，本项目只使用rc.2已确认的顶层icon。
 - 新SSH地址git@github.com:xingxingbk-git/dsh-chat.git已通过git ls-remote读取HEAD=39cce8b7134937a58174037f38f20d0402f9db4a；仅证明地址可访问，不宣称本轮源码已推送。gh未登录，不要求用户另行授权，使用现有SSH完成只读验证。
+
+## W019配置与重启调查（2026-10-10）
+
+- 再读[官方live configuration forms](https://deepseek-harness.github.io/deepseek-harness/en/reference/cookbook/adding-a-settings-card)：Config volatile、唯一entry id、ConfigEditor写回、重启和实例身份验收。页面为当前文档；本轮实现以rc.2发布包为准。
+- [rc.2 settings provider](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/settings/src/index.ts)、[rc.2 ui-settings Host owner](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-settings/src/index.ts)及对应已安装类型：volatile fields由settings.describe投影，ConfigEditor/profile patch保存，auto:false提供自定义页。没有live Inspect。
+- [rc.2 Browser guests](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/apps/desktop/src/browser-guests.ts)和当前master同文件再次检查：随机内存partition、lease匹配检查；公开types没有persist参数。GitHub web抓取有Cache miss，结论来自已读取固定公开源码/本机发布产物，不把失败抓取说成成功。主进程持久化提案为本地设计文档，未向上游发消息。
+- 原生Modal层级以@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2发布包Modal.module.css确认1000，react-dom是官方共享模块。网页实际设置的四类、账号公开资料、Voice、训练开关、共享/导出/删除和条款/隐私入口均通过现有登录态只读观察；没有执行账号解绑/删除、数据导出/删除、隐私修改或发送消息。新版完整操作仍待验收。
+
+- W019最新范围已取消四Tab/Voice。上述官网完整设置观察仅是历史证据；当前只实现账号昵称、当前会话退出和语言。实机定位器回归已对照仓库HEAD旧版适配，官网语言读取与配置落盘分别核查；所有结论以handoff最新分层为准。

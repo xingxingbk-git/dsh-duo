@@ -18,7 +18,7 @@ function deferred<T>() {
 }
 
 /** Cordis nested-effect and declared-Slot fixtures; no native guest or webpage runs. */
-function harness(originalPanel: string | null = 'plugins', failMount = false) {
+function harness(originalPanel: string | null = 'plugins', failMount = false, saved?: {language:string}) {
   type Dispose = () => void | Promise<void>
   const rootEffects: Dispose[] = []
   let collector = rootEffects
@@ -78,10 +78,14 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
         Promise.resolve(result).then(() => fulfilled(() => dispose()), rejected),
     })
   }
+  const prefListeners=new Set<()=>void>();const writes: [string,string][]=[]
+  const form={getSnapshot:()=>({status:'ready',value:saved}),subscribe:(fn:()=>void)=>{prefListeners.add(fn);return()=>prefListeners.delete(fn)},set:async(key:string,value:string)=>{writes.push([key,value]);saved={...saved!,[key]:value};for(const fn of prefListeners)fn();return true}}
   const ctx = {
+    configForms:{get:(ns:string)=>{assert.equal(ns,'dsh-chat');return form}},
     effect,
     inject: (dependencies: string[], callback: (ctx: unknown) => unknown) => {
-      assert.deepEqual(dependencies, ['remote', 'remote.dshChat'])
+      assert.deepEqual(dependencies, dependencies[0]==='configForms' ? ['configForms'] : ['remote', 'remote.dshChat'])
+      if(dependencies[0]==='configForms' && !saved) return {dispose:async()=>{},then:(fulfilled:()=>unknown)=>Promise.resolve().then(fulfilled)}
       const dispose = effect(() => callback(ctx))
       return { dispose, then: (fulfilled: () => unknown) => Promise.resolve().then(fulfilled) }
     },
@@ -124,7 +128,7 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
   const bridge = registrations.get(`main:${CHAT_PANEL}`)!.inject().bridge
   let cleaned = false
   return {
-    bridge, order, requests, panel: () => panel, registrations: () => [...registrations.keys()],
+    bridge, order, requests, writes, panel: () => panel, registrations: () => [...registrations.keys()],
     async ready() { await flush(); await Promise.all(setup); await flush() },
     emit(value: AuthorizationState, aborted = false) {
       const controller = new AbortController()
@@ -320,3 +324,50 @@ test('a transport failure preserves a confirmed account and the selected Chat mo
     assert.match(h.bridge.getSnapshot().error!, /刷新授权/)
   } finally { await h.dispose() }
 })
+
+ test('native settings restores persisted preferences before saving guest defaults, then persists confirmed edits',async()=>{
+  const h=harness('plugins',false,{language:'zh-CN'})
+  try {
+    await h.ready();h.requests[0].resolve({ok:true,value:authorized()});await flush()
+    h.bridge.updateSettingsViewport({left:100,top:100,width:500,height:400})
+    const generation=h.bridge.getSnapshot().authorizationGeneration
+    const commands:unknown[]=[]
+    h.bridge.bindWebsiteNavigation(generation,async command=>{commands.push(command)})
+    const navigation={status:'ready' as const,conversations:[],selectedHref:null,canCreate:true,error:null}
+    h.bridge.reportWebsiteNavigation(generation,{...navigation,settings:{language:'English',theme:'Dark',error:null,restored:true,pending:false}})
+    await flush();assert.deepEqual(commands,[{type:'preferences',language:'zh-CN'},{type:'settings-read'}]);assert.deepEqual(h.writes,[])
+    h.bridge.reportWebsiteNavigation(generation,{...navigation,settings:{language:'English',theme:'Dark',error:null,restored:false,pending:true}})
+    h.bridge.reportWebsiteNavigation(generation,{...navigation,settings:{language:'简体中文',theme:'Dark',error:null,restored:true,pending:false}})
+    await flush();assert.deepEqual(h.writes,[])
+    h.bridge.reportWebsiteNavigation(generation,{...navigation,settings:{language:'English',theme:'Dark',error:null,restored:true,pending:false}})
+    await flush();assert.deepEqual(h.writes,[['language','en']])
+    h.bridge.commandWebsite({type:'setting',key:'language',value:'en'});await flush();assert.deepEqual(commands.at(-1),{type:'setting',key:'language',value:'en'})
+    h.bridge.updateSettingsViewport(null);await flush();assert.deepEqual(commands.at(-1),{type:'settings-close'})
+  }finally{await h.dispose()}
+ })
+ test('explicit current website logout returns Harness and gates Chat until website sign-in succeeds',async()=>{
+  const h=harness()
+  try {
+    await h.ready();h.requests[0].resolve({ok:true,value:authorized()});await flush()
+    h.bridge.selectMode('chat');await flush();h.requests[1].resolve({ok:true,value:authorized()});await flush()
+    const generation=h.bridge.getSnapshot().authorizationGeneration;const commands:unknown[]=[]
+    h.bridge.bindWebsiteNavigation(generation,async c=>{commands.push(c)})
+    h.bridge.logoutWebsite();await flush();assert.deepEqual(commands.at(-1),{type:'logout'})
+    h.bridge.reportWebsiteNavigation(generation,{status:'sign-in',conversations:[],selectedHref:null,canCreate:false,error:null})
+    assert.equal(h.bridge.getSnapshot().mode,'harness');assert.equal(h.bridge.getSnapshot().modeEnabled,false)
+    h.bridge.selectMode('chat');await flush();assert.equal(h.bridge.getSnapshot().mode,'harness')
+    h.bridge.reportWebsiteNavigation(generation,{status:'ready',conversations:[],selectedHref:null,canCreate:true,error:null})
+    assert.equal(h.bridge.getSnapshot().modeEnabled,true)
+  }finally{await h.dispose()}
+ })
+
+ test('an observed website sign-out after ready falls back even across an intervening load',async()=>{
+  const h=harness()
+  try{
+    await h.ready();h.requests[0].resolve({ok:true,value:authorized()});await flush()
+    h.bridge.selectMode('chat');await flush();h.requests[1].resolve({ok:true,value:authorized()});await flush()
+    const generation=h.bridge.getSnapshot().authorizationGeneration
+    for(const status of ['ready','loading','sign-in'] as const) h.bridge.reportWebsiteNavigation(generation,{status,conversations:[],selectedHref:null,canCreate:status==='ready',error:null})
+    assert.equal(h.bridge.getSnapshot().mode,'harness');assert.equal(h.bridge.getSnapshot().modeEnabled,false)
+  }finally{await h.dispose()}
+ })

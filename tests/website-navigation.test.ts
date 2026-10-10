@@ -24,10 +24,16 @@ test('account and preference responses are bounded and discarded outside a ready
   assert.equal(ready.accountName?.length,100)
   assert.equal(ready.settings?.language?.length,80)
   assert.equal(ready.settings?.error?.length,200)
-  for (const status of ['sign-in','loading','unsupported']) {
+  for (const status of ['sign-in','unsupported']) {
     const cleared=parseWebsiteNavigation({...payload,status})
     assert.equal(cleared.accountName,null)
-    assert.equal(cleared.settings,undefined)
+    assert.equal(cleared.settings?.error?.length,200)
     assert.equal(cleared.canCreate,false)
   }
 })
+
+ test('loading keeps bounded settings errors while withholding account/history',()=>{
+  const parsed=parseWebsiteNavigation({status:'loading',conversations:[],canCreate:true,accountName:'private fixture',settings:{error:'timeout',language:'English',restored:false,pending:true}})
+  assert.equal(parsed.accountName,null);assert.equal(parsed.canCreate,false)
+  assert.equal(parsed.settings?.error,'timeout');assert.equal(parsed.settings?.pending,true)
+ })

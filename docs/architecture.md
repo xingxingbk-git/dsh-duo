@@ -72,7 +72,7 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 W016登录核查：固定deepseek-account-platform默认Platform origin为platform.deepseek.com、inference origin为api.deepseek.com；公开PlatformSession仅用于平台嵌入，Browser acquire由主进程生成进程内隔离partition。未发现面向chat.deepseek.com的官方SSO/凭据交换入口，因此本版不实现共用登录，也不调用Host-only凭据方法或迁移Cookie。重启网页登录失效来自分区生命周期，不能归因于DSH授权失败。
 
-每1.2秒串行刷新可见导航，HARNESS期间不执行适配；卸载/授权代次变化撤回动作绑定和guest。Client同时限定模式/门槛/代次及已加载链接，旧账号回包不能污染新列表。网页返回payload按非信任输入过滤origin、大小和类型，标题仅作React文本。登录页路径只能说明页面在登录视图，不证明DSH授权失效或两处账号相同，不自动回HARNESS。
+每1.2秒串行刷新可见导航，HARNESS期间不执行适配；卸载/授权代次变化撤回动作绑定和guest。Client同时限定模式/门槛/代次及已加载链接，旧账号回包不能污染新列表。网页返回payload按非信任输入过滤origin、大小和类型，标题仅作React文本。首次登录页只说明官网尚未登录，不证明DSH授权失效或两处账号相同；曾确认官网ready后再次进入sign_in，或插件显式当前退出请求后确认sign_in，则回HARNESS并禁用模式，可从CHAT设置重新官网登录。
 
 当前适配已在Mac真实官网确认分组列表、选择联动和＋新建；空账号/官网布局变化、动态加载更多与网页内部账号切换仍需扩展实测。公开webview方法文档及固定Sidebar owner契约见references。
 
@@ -97,3 +97,15 @@ Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git
 插件包、两端name导出、bundle patch及Typert贡献package统一为dsh-chat；Host/Client同步使用dshChat namespace，注册键和自有DOM标记同用dsh-chat前缀，类型为DshChat*。不保留旧名别名，不同时安装两份插件。包名变更涉及新的browser accountStorageKey，按正常网页登录恢复账号历史，不迁移旧guest凭据。
 
 插件管理图片使用package.json顶层icon=./assets/icon.svg，导出./package.json供官方readPluginMeta发现，并将assets/icon.svg加入files及source-only Git安装fixture。DSH rc.2固定源码明确支持manifest相对路径、自包含SVG和256 KiB上限；不用网页DOM或侧栏Slot替换管理页图标。当前仅静态资源/打包验证，不宣称已安装UI验收。
+
+## W019精简设置与标题布局（2026-10-10）
+
+完整四Tab官网设置嵌入实机出现超时/空白，用户明确取消该方案。本轮settings.section只承接原生网页账号昵称、退出当前会话和系统语言。website-settings.ts通过官网公开头像菜单进入General，定位Language控件、修改并读回；错误有期限，不伪造成功。官网语言读写、中文/英文往返及官方language=zh-CN配置落盘已通过本机实测，详细分层证据及产物以handoff为准。禁止以“登出所有设备”替代当前会话退出；确认sign_in后回HARNESS并禁用模式，约1.2秒轮询不等于官方退出事件。
+
+主区使用原官网标题/分享节点，固定同一48px顶行；展开标题左距24px，折叠按插件shell.leading实际右缘加16px横向避让，分享距右缘12px，不增加整行垂直留白。官网实际顶栏含三个按钮，分享除公开标签外还以顶行最右侧图标的限定位置信号识别；标题只定位直接显示选中标题的叶元素，覆盖原居中/截断宽度。展开/折叠实机截图通过。仅从导航选中标题定位页头，不读取聊天正文；分享仍保留官网交互，不自动生成链接。
+
+自有react-dom body portal保持guest/lease身份。登录页呈现在原生设置窗格；已登录时官网通用设置操作在后台进行，原生页只显示上述三个控件。操作期间恢复官网导航布局以保留头像菜单锚点，结束后再隐藏；避免透明guest覆盖原生输入。正常viewport后台操作已实测读写成功；不采用屏幕外位置。热更新可能保留旧Slot/状态引用，安装文件正确不等于当前UI已经运行新代码。
+
+Host Config只有language这一volatile非凭据字段；Client使用configForms唯一entry id dsh-chat，官网确认读回后保存。先恢复保存的语言再允许写入新值，避免guest默认语言覆写偏好；账号代次隔离。ConfigEditor写官方Cordis profile patch，不使用私有settings.json或站点storage。32项单测与15项公开DOM夹具只证明对应分支；官方profile落盘已实测，彻底重启后的恢复仍未复验。
+
+网页登录持久化仍未修复：公开DesktopBrowserBridge.acquire(workspace)不接受持久选项，主进程生成随机无persist前缀partition并强制lease匹配；插件Host子进程没有公开Session管理能力。核查时master也相同。见browser-session-capability.md；未修改安装包、User-Agent、安全策略或凭据。

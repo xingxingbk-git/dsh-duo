@@ -30,6 +30,8 @@ export interface DshChatViewState {
   readonly accountStorageKey: string | null
   readonly authorizationGeneration: number
   readonly websiteReloadRevision: number
+  readonly settingsViewport: DshChatViewportRect | null
+  readonly preferenceError: string | null
   readonly viewport: DshChatViewportRect | null
   readonly brandAnchor: DshChatViewportRect | null
   readonly sidebarAdapted: boolean | null
@@ -54,6 +56,8 @@ export interface DshChatUIBridge {
   bindWebsiteNavigation(generation: number, handler: (command: WebsiteCommand) => Promise<void>): () => void
   commandWebsite(command: WebsiteCommand): void
   toggleWebsiteNavigation(): void
+  updateSettingsViewport(rect: DshChatViewportRect | null): void
+  logoutWebsite(): void
 }
 
 export interface DshChatBridgeProps { readonly bridge: DshChatUIBridge }
@@ -230,26 +234,45 @@ export function DshChatLeadingControls({bridge}: PropsRuntime<'shell.leading'> &
   </div>
 }
 
-export function DshChatChatSettings({bridge, close}: PropsRuntime<'settings.section'> & DshChatBridgeProps) {
+export function DshChatChatSettings({bridge}: PropsRuntime<'settings.section'> & DshChatBridgeProps) {
   const state = useDshChat(bridge)
-  const nav = state.websiteNavigation
-  const available = state.mode === 'chat' && state.modeEnabled && nav.status === 'ready'
-  useLayoutEffect(() => { if (available) bridge.commandWebsite({type:'settings-read'}) }, [bridge,available])
-  const preference = (key:'language'|'theme',value:string) => bridge.commandWebsite({type:'setting',key,value})
-  const language = /中文|Chinese/i.test(nav.settings?.language ?? '') ? 'zh-CN' : /English|英语/i.test(nav.settings?.language ?? '') ? 'en' : nav.settings?.language ? 'system' : ''
-  const openWebsiteSettings = () => { bridge.commandWebsite({type:'settings-open'}); close() }
+  const pane = useRef<HTMLDivElement>(null)
+  const enabled = state.desktopAvailable && state.authorizationStatus === 'authorized'
+  useLayoutEffect(() => {
+    const element = pane.current
+    if (!element || !enabled) { bridge.updateSettingsViewport(null); return }
+    const measure = () => {
+      const rect = element.getBoundingClientRect()
+      bridge.updateSettingsViewport({left:rect.left,top:rect.top,width:rect.width,height:rect.height})
+    }
+    const resize = new ResizeObserver(measure); resize.observe(element)
+    globalThis.addEventListener('resize',measure)
+    globalThis.addEventListener('scroll',measure,true)
+    measure()
+    return () => { resize.disconnect(); globalThis.removeEventListener('resize',measure);globalThis.removeEventListener('scroll',measure,true);bridge.updateSettingsViewport(null) }
+  }, [bridge,enabled])
+  useLayoutEffect(() => {
+    if (!enabled || !pane.current) return
+    const rect=pane.current.getBoundingClientRect()
+    bridge.updateSettingsViewport({left:rect.left,top:rect.top,width:rect.width,height:rect.height})
+  }, [bridge,enabled,state.preferenceError,state.websiteNavigation.accountName,state.websiteNavigation.settings?.error])
+  const navigation=state.websiteNavigation
+  const settings=navigation.settings
+  const language=/中文|Chinese/i.test(settings?.language ?? '') ? 'zh-CN' : /English|英语/i.test(settings?.language ?? '') ? 'en' : /^(System|跟随系统|系统|Follow system)$/i.test(settings?.language ?? '') ? 'system' : ''
   return <section className="dsh-chat-settings"><DshChatStyles/><h2>CHAT设置</h2>
-    <div className="dsh-chat-settings-card"><h3>DeepSeek Chat 账号</h3>
-      <strong>{nav.accountName || (nav.status === 'sign-in' ? '尚未登录官网' : nav.status === 'ready' ? '官网已登录，账号资料暂未识别' : '尚未确认官网账号')}</strong>
-      <p>此处显示网页账号。DSH授权和网页登录分别管理。</p>
-      {state.mode !== 'chat' && <button onClick={() => {bridge.selectMode('chat');close()}} disabled={!state.modeEnabled}>进入CHAT</button>}
-    </div>
-    <div className="dsh-chat-settings-card"><h3>网页偏好</h3><p>CHAT固定使用暗色。系统语言由官网保存。</p>
-      <div className="dsh-chat-settings-row"><span>系统语言</span><select aria-label="系统语言" value={language} disabled={!available || nav.settings?.pending || !language} onChange={e => preference('language',e.target.value)}><option value="">{nav.status==='sign-in' ? '官网未登录' : !available ? '暂无可用值' : '正在读取…'}</option><option value="system">跟随系统</option><option value="zh-CN">简体中文</option><option value="en">English</option></select></div>
-      {nav.settings?.pending && <p role="status">正在确认官网设置…</p>}
-      {nav.settings?.error && <p role="alert">{nav.settings.error}</p>}
-      <button onClick={openWebsiteSettings} disabled={!available || nav.settings?.pending}>打开官网设置</button>
-      <button onClick={() => {bridge.toggleWebsiteNavigation();close()}} disabled={!available}>官网完整导航</button><button onClick={() => {bridge.reloadWebsite();close()}} disabled={!state.modeEnabled}>重新加载网页</button>
+    {enabled && navigation.status==='ready' && <div className="dsh-chat-settings-card">
+      <div className="dsh-chat-settings-account"><div><strong>{navigation.accountName || 'DeepSeek Chat'}</strong><p>已登录</p></div><button type="button" onClick={()=>bridge.logoutWebsite()} disabled={settings?.pending}>退出登录</button></div>
+      <label className="dsh-chat-settings-language">系统语言<select aria-label="CHAT系统语言" value={language} disabled={settings?.pending} onChange={event=>bridge.commandWebsite({type:'setting',key:'language',value:event.target.value})}>
+        {!language && <option value="" hidden></option>}<option value="system">跟随系统</option><option value="zh-CN">简体中文</option><option value="en">English</option>
+      </select></label>
+      {!language && !settings?.pending && !settings?.error && <p className="dsh-chat-settings-progress" role="status">尚未读取到官网语言。<button type="button" onClick={()=>bridge.commandWebsite({type:'settings-read'})}>重试</button></p>}
+      {settings?.pending && <p className="dsh-chat-settings-progress" role="status">正在同步网页设置…</p>}
+      {settings?.error && <p className="dsh-chat-settings-error" role="alert">{settings.error} <button type="button" onClick={()=>bridge.commandWebsite({type:'settings-read'})}>重试</button></p>}
+      {state.preferenceError && <p className="dsh-chat-settings-error" role="alert">{state.preferenceError}</p>}
+    </div>}
+    {!enabled && <p role="status">{state.desktopAvailable ? state.availabilityMessage : '需要 DSH 桌面版的官方网页容器。'}</p>}
+    {enabled && navigation.status!=='ready' && navigation.status!=='sign-in' && <p role="status">{state.webError || (navigation.status==='unsupported' ? '暂时无法连接官网。' : '正在连接 DeepSeek 官网…')} <button type="button" onClick={()=>bridge.reloadWebsite()}>重试</button></p>}
+    <div ref={pane} className={`dsh-chat-settings-pane${enabled && navigation.status==='sign-in' ? '' : ' dsh-chat-settings-pane-hidden'}`} aria-label="CHAT官网登录区域">
     </div>
   </section>
 }
