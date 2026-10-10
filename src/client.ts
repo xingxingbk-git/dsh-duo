@@ -13,6 +13,7 @@ import { DuoWebSurface } from './web-surface.js'
 
 export const name = 'dsh-duo'
 export const inject = ['slots', 'layout', 'remote']
+const AUTHORIZATION_TIMEOUT_MS = 35_000
 
 function desktopBrowser(): DesktopBrowserBridge | undefined {
   const desktop = (globalThis as typeof globalThis & {
@@ -29,7 +30,9 @@ export function apply(ctx: Context): void {
   const lifetime = new AbortController()
   const listeners = new Set<() => void>()
   let disposed = false
-  let remoteReady = false
+  let remoteContext: Context | null = null
+  let connecting: Promise<void> | null = null
+  let refreshing: Promise<void> | null = null
   let authorizationGeneration = 0
   let websiteReloadRevision = 0
   let webLoading = false
@@ -86,17 +89,86 @@ export function apply(ctx: Context): void {
     version: '0.2.0-rc.2', locale: globalThis.navigator?.language ?? 'zh-CN',
     timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60,
   }
-  async function refreshAuthorization(): Promise<void> {
-    if (!remoteReady || disposed) return
-    const requestGeneration = authorizationGeneration
-    try {
-      const result = await ctx.remote.dshDuo.authorization(metadata, lifetime.signal)
-      if (disposed || requestGeneration !== authorizationGeneration) return
-      if (result.ok) acceptAuthorization(result.value)
-      else { connectionError = '无法连接 DSH 账号服务，请稍后重试。'; publish() }
-    } catch {
-      if (!disposed && requestGeneration === authorizationGeneration) { connectionError = '无法连接 DSH 账号服务，请稍后重试。'; publish() }
+  function authorizationFailed(message: string): void {
+    if (disposed) return
+    connectionError = message
+    const previous = mode.getSnapshot().authorization
+    // A transport failure cannot revoke an already confirmed account or imply sign-out.
+    if (previous.status === 'pending') mode.updateAuthorization({ ...previous, status: 'unavailable' })
+    publish()
+  }
+  async function connectRemote(): Promise<void> {
+    if (remoteContext || disposed) return
+    if (!connecting) {
+      connecting = Promise.resolve(ctx.effect(async () => {
+        const unmount = await ctx.remote.$mount(DUO_REMOTE_CONTRIBUTION)
+        if (disposed) { await unmount(); return () => {} }
+        // $mount publishes a separate Cordis service. Inject it only after
+        // mounting, and call its methods from this dependency-aware Context.
+        const consumer = ctx.inject(['remote', 'remote.dshDuo'], remoteCtx => {
+          remoteCtx.effect(() => {
+            remoteContext = remoteCtx
+            const stream = remoteCtx.remote.$stream<AuthorizationState>({
+              name: 'dsh-duo.authorization', open: signal => remoteCtx.remote.dshDuo.watchAuthorization(metadata, signal),
+              ended: () => new Error('DSH account stream ended'),
+              carrierFailed: () => { authorizationFailed('DSH 账号连接暂时中断，请刷新授权。') },
+            })
+            void (async () => {
+              try {
+                for await (const item of stream) {
+                  if (disposed || remoteContext !== remoteCtx) break
+                  if (item.signal.aborted) continue
+                  acceptAuthorization(item.value); item.accept()
+                }
+              } catch { if (remoteContext === remoteCtx) authorizationFailed('DSH 账号状态通知不可用，请刷新授权。') }
+            })()
+            return () => {
+              if (remoteContext === remoteCtx) remoteContext = null
+              return stream.dispose()
+            }
+          }, 'dsh-duo account observation')
+        })
+        try { await consumer }
+        catch (error) { await consumer.dispose(); await unmount(); throw error }
+        return async () => { await consumer.dispose(); await unmount() }
+      }, 'dsh-duo safe account remote')).then(() => {}).finally(() => { connecting = null })
     }
+    await connecting
+  }
+  function refreshAuthorization(): Promise<void> {
+    if (disposed) return Promise.resolve()
+    if (refreshing) return refreshing
+    refreshing = (async () => {
+      const requestGeneration = authorizationGeneration
+      const request = new AbortController()
+      const cancel = () => { request.abort() }
+      lifetime.signal.addEventListener('abort', cancel, { once: true })
+      let timedOut = false
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const deadline = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => { timedOut = true; request.abort(); reject(new Error('Authorization deadline exceeded')) }, AUTHORIZATION_TIMEOUT_MS)
+        request.signal.addEventListener('abort', () => { reject(new Error('Authorization request cancelled')) }, { once: true })
+      })
+      try {
+        const result = await Promise.race([
+          (async () => {
+            await connectRemote()
+            if (request.signal.aborted || !remoteContext) throw new Error('Account remote unavailable')
+            return remoteContext.remote.dshDuo.authorization(metadata, request.signal)
+          })(), deadline,
+        ])
+        if (disposed || request.signal.aborted || requestGeneration !== authorizationGeneration) return
+        if (result.ok) acceptAuthorization(result.value)
+        else authorizationFailed('无法连接 DSH 账号服务，请刷新授权重试。')
+      } catch {
+        if (!disposed && (requestGeneration === authorizationGeneration || mode.getSnapshot().authorization.status === 'pending')) authorizationFailed(timedOut
+          ? 'DSH 账号授权检查超时，请检查网络后刷新授权。' : '无法连接 DSH 账号服务，请刷新授权重试。')
+      } finally {
+        clearTimeout(timer)
+        lifetime.signal.removeEventListener('abort', cancel)
+      }
+    })().finally(() => { refreshing = null })
+    return refreshing
   }
   bridge = {
     getSnapshot: () => cached,
@@ -138,27 +210,7 @@ export function apply(ctx: Context): void {
     const stopPanel = ctx.layout.panelInfo.subscribe(() => { mode.observePanel(ctx.layout.panelInfo.getSnapshot().activePanelId) })
     const refreshOnFocus = () => { void refreshAuthorization() }
     globalThis.addEventListener('focus', refreshOnFocus)
-    ctx.effect(async () => {
-      const unmount = await ctx.remote.$mount(DUO_REMOTE_CONTRIBUTION)
-      if (disposed) { unmount(); return () => {} }
-      remoteReady = true
-      void refreshAuthorization()
-      const stream = ctx.remote.$stream<AuthorizationState>({
-        name: 'dsh-duo.authorization', open: signal => ctx.remote.dshDuo.watchAuthorization(metadata, signal),
-        ended: () => new Error('DSH account stream ended'),
-        carrierFailed: () => { if (!disposed) { connectionError = 'DSH 连接暂时中断，网页账号状态由网页自身处理。'; publish() } },
-      })
-      void (async () => {
-        try {
-          for await (const item of stream) {
-            if (disposed) break
-            if (item.signal.aborted) continue
-            acceptAuthorization(item.value); item.accept()
-          }
-        } catch { if (!disposed) { connectionError = 'DSH 账号状态通知不可用，请刷新授权。'; publish() } }
-      })()
-      return async () => { await stream.dispose(); unmount() }
-    }, 'dsh-duo safe account remote')
+    void refreshAuthorization()
     return () => {
       navigationAttempt++
       mode.dispose(); stopPanel(); stopMode(); disposed = true; lifetime.abort(); listeners.clear()

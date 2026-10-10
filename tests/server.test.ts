@@ -4,12 +4,13 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { DuoUIBridge } from '../src/ui.js'
 
 // Compile only our Service; load the real packages from the project so Cordis,
 // its registry, and the Gateway keep their published runtime identities.
 const require = createRequire(path.join(process.cwd(), 'package.json'))
 const { build } = require('esbuild')
-const { Context } = require('@deepseek-ai/cordis')
+const { Context, Service } = require('@deepseek-ai/cordis')
 const { default: TypertRegistry } = require('@deepseek-ai/dsh-typert-registry')
 const { default: TypertGateway } = require('@deepseek-ai/dsh-api-gateway')
 const metadata = { version: '0.2.0-rc.2', locale: 'zh-CN', timezoneOffsetSeconds: 28_800 }
@@ -119,6 +120,14 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
   const clientAuthorization = await clientCtx.remote.dshDuo.authorization(metadata)
   assert.equal(clientAuthorization.ok, true)
   assert.equal(clientAuthorization.value.accountId, authorized.accountId)
+  // A root Context bypasses plugin dependency enforcement. Keep the failing
+  // shape covered explicitly so the integration cannot accidentally miss it.
+  const missingDependency = clientCtx.plugin({
+    name: 'fixture-missing-namespace-dependency', inject: ['remote'],
+    apply: (child: typeof clientCtx) => child.remote.dshDuo.authorization(metadata),
+  })
+  await assert.rejects(Promise.resolve(missingDependency), /remote\.dshDuo.*without inject/)
+  await missingDependency.dispose()
   const capturedMethod = clientCtx.remote.dshDuo.authorization
   const clientStream = clientCtx.remote.dshDuo.watchAuthorization(metadata)
   const clientIterator = clientStream[Symbol.asyncIterator]()
@@ -147,6 +156,90 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
   const callsBeforeWithdrawal = carrierCalls
   assert.equal((await capturedMethod(metadata)).ok, false)
   assert.equal(carrierCalls, callsBeforeWithdrawal)
+
+  // Exercise the production Client as an actual plugin, including dynamic
+  // namespace injection. Only Slot presentation/layout and the carrier are fixtures.
+  const productionArtifact = path.join(output, 'client.mjs')
+  await build({
+    absWorkingDir: process.cwd(), entryPoints: ['src/client.ts'], outfile: productionArtifact,
+    bundle: true, packages: 'external', format: 'esm', platform: 'node', target: 'es2022',
+    plugins: [{ name: 'presentation-fixtures', setup(plugin: any) {
+      plugin.onResolve({ filter: /^\.\/(?:ui|web-surface)\.js$/ }, (args: { importer: string; path: string }) => {
+        if (path.resolve(args.importer) === path.join(process.cwd(), 'src/client.ts')) return { path: args.path, namespace: 'fixture' }
+      })
+      plugin.onLoad({ filter: /.*/, namespace: 'fixture' }, (args: { path: string }) => ({
+        contents: args.path === './ui.js'
+          ? 'export const DuoModeControl=()=>null, DuoOverlayControl=()=>null, DuoChatSidebar=()=>null, DuoChatLeading=()=>null, DuoChatPanel=()=>null;'
+          : 'export const DuoWebSurface=()=>null;', loader: 'js',
+      }))
+    } }],
+  })
+  const clientPlugin = await import(pathToFileURL(productionArtifact).href)
+  const product = globalThis as typeof globalThis & { dshDesktop?: unknown }
+  const priorDesktop = product.dshDesktop
+  const priorAdd = globalThis.addEventListener
+  const priorRemove = globalThis.removeEventListener
+  product.dshDesktop = { protocolVersion: 1, browser: { acquire: () => {}, release: () => {}, onOpenRequested: () => {} } }
+  globalThis.addEventListener = () => {}
+  globalThis.removeEventListener = () => {}
+  t.after(() => {
+    if (priorDesktop === undefined) delete product.dshDesktop
+    else product.dshDesktop = priorDesktop
+    globalThis.addEventListener = priorAdd
+    globalThis.removeEventListener = priorRemove
+  })
+  let bridge!: DuoUIBridge
+  let panel: string | null = 'plugins'
+  const panelListeners = new Set<() => void>()
+  const slotKeys = new Set<string>()
+  class FixtureSlots extends Service {
+    constructor(context: typeof clientCtx) { super(context, 'slots') }
+    inject(_name: string, callback: () => unknown) { return this.ctx.effect(callback) }
+    register(options: { name: string; key?: string; id?: string; inject: () => { bridge: DuoUIBridge } }) {
+      const key = `${options.name}:${options.key ?? options.id ?? ''}`
+      slotKeys.add(key)
+      if (options.name === 'main') bridge = options.inject().bridge
+      return this.ctx.effect(() => () => { slotKeys.delete(key) })
+    }
+  }
+  const fixtureSlots = clientCtx.plugin(FixtureSlots)
+  await fixtureSlots
+  t.after(() => fixtureSlots.dispose())
+  clientCtx.provide('layout', {
+    panelInfo: { getSnapshot: () => ({ activePanelId: panel }), subscribe: (listener: () => void) => {
+      panelListeners.add(listener); return () => { panelListeners.delete(listener) }
+    } },
+    selectPanel: (next: string | null) => { panel = next; for (const listener of panelListeners) listener() },
+    toggleSidebar: () => {},
+  })
+  const production = clientCtx.plugin(clientPlugin)
+  t.after(() => production.dispose())
+  await production
+  const until = async (predicate: () => boolean) => {
+    for (let index = 0; index < 100; index++) {
+      if (predicate()) return
+      await new Promise<void>(resolve => { setImmediate(resolve) })
+    }
+    assert.fail('production Client state did not settle')
+  }
+  await until(() => bridge.getSnapshot().authorizationStatus === 'unauthorized')
+  assert.equal(bridge.getSnapshot().modeEnabled, false)
+  accountStatus = 'credential-stored'
+  ctx.emit('credentials/record-updated', 'deepseek-account-platform/default')
+  bridge.refreshAuthorization()
+  await until(() => bridge.getSnapshot().modeEnabled)
+  assert.equal(bridge.getSnapshot().mode, 'harness')
+  assert.equal(bridge.getSnapshot().error, null)
+  bridge.selectMode('chat')
+  await until(() => bridge.getSnapshot().mode === 'chat')
+  accountStatus = 'signed-out'
+  ctx.emit('deepseek-account/signed-out')
+  await until(() => bridge.getSnapshot().authorizationStatus === 'unauthorized')
+  assert.equal(bridge.getSnapshot().mode, 'harness')
+  assert.equal(panel, 'plugins')
+  await production.dispose()
+  assert.equal(slotKeys.size, 0)
+  assert.equal(clientCtx.get('remote.dshDuo'), undefined)
   await clientGateway.dispose()
   assert.equal(carrierStopped, true)
 

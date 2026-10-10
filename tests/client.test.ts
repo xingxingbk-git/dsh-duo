@@ -12,12 +12,13 @@ const flush = async () => { for (let index = 0; index < 12; index++) await Promi
 
 function deferred<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>(done => { resolve = done })
-  return { promise, resolve }
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail })
+  return { promise, resolve, reject }
 }
 
 /** Cordis nested-effect and declared-Slot fixtures; no native guest or webpage runs. */
-function harness(originalPanel: string | null = 'plugins') {
+function harness(originalPanel: string | null = 'plugins', failMount = false) {
   type Dispose = () => void | Promise<void>
   const rootEffects: Dispose[] = []
   let collector = rootEffects
@@ -59,7 +60,11 @@ function harness(originalPanel: string | null = 'plugins') {
         children.push(...value as Iterable<Dispose>)
       }
     }
-    if (result && typeof result === 'object' && 'then' in result) setup.push(Promise.resolve(result).then(collect))
+    if (result && typeof result === 'object' && 'then' in result) {
+      const task = Promise.resolve(result).then(collect)
+      setup.push(task)
+      void task.catch(() => {}) // Cordis also observes failed effect setup before callers retry.
+    }
     else collect(result)
     let disposed = false
     const dispose = async () => {
@@ -68,10 +73,18 @@ function harness(originalPanel: string | null = 'plugins') {
       for (const cleanup of [...children].reverse()) await cleanup()
     }
     parent.push(dispose)
-    return dispose
+    return Object.assign(dispose, {
+      then: (fulfilled: (cleanup: Dispose) => unknown, rejected: (reason: unknown) => unknown) =>
+        Promise.resolve(result).then(() => fulfilled(() => dispose()), rejected),
+    })
   }
   const ctx = {
     effect,
+    inject: (dependencies: string[], callback: (ctx: unknown) => unknown) => {
+      assert.deepEqual(dependencies, ['remote', 'remote.dshDuo'])
+      const dispose = effect(() => callback(ctx))
+      return { dispose, then: (fulfilled: () => unknown) => Promise.resolve().then(fulfilled) }
+    },
     slots: {
       inject: (_name: string, callback: () => unknown) => effect(callback),
       register: (options: { name: string; key?: string; id?: string; inject: () => { bridge: DuoUIBridge } }) => {
@@ -89,7 +102,11 @@ function harness(originalPanel: string | null = 'plugins') {
       toggleSidebar: () => {},
     },
     remote: {
-      $mount: async () => () => { order.push('remote:unmount') },
+      $mount: async () => {
+        order.push('remote:mount')
+        if (failMount) { failMount = false; throw new Error('fixture mount failure') }
+        return () => { order.push('remote:unmount') }
+      },
       $stream: () => stream,
       dshDuo: {
         authorization: () => { const value = deferred<{ ok: true; value: AuthorizationState }>(); requests.push(value); return value.promise },
@@ -190,5 +207,67 @@ test('an account change while entering Chat cannot auto-enter the replacement ac
     assert.equal(h.bridge.getSnapshot().mode, 'harness')
     assert.equal(h.bridge.getSnapshot().accountStorageKey, 'dsh-duo:website:B')
     assert.equal(h.panel(), 'plugins')
+  } finally { await h.dispose() }
+})
+
+test('initial remote failure leaves pending, keeps Harness gated, and can be retried', async () => {
+  const h = harness()
+  try {
+    await h.ready()
+    h.requests[0].reject(new Error('fixture connection failure')); await flush()
+    assert.equal(h.bridge.getSnapshot().authorizationStatus, 'unavailable')
+    assert.equal(h.bridge.getSnapshot().modeEnabled, false)
+    assert.match(h.bridge.getSnapshot().error!, /刷新授权/)
+    h.bridge.refreshAuthorization(); await flush()
+    h.requests[1].resolve({ ok: true, value: authorized() }); await flush()
+    assert.equal(h.bridge.getSnapshot().authorizationStatus, 'authorized')
+    assert.equal(h.bridge.getSnapshot().mode, 'harness')
+    assert.equal(h.bridge.getSnapshot().error, null)
+  } finally { await h.dispose() }
+})
+
+test('failed namespace setup is visible and retry mounts a working consumer', async () => {
+  const h = harness('plugins', true)
+  try {
+    // Failed async setup is already handled by the Client's refresh routine.
+    await flush()
+    assert.equal(h.bridge.getSnapshot().authorizationStatus, 'unavailable')
+    assert.equal(h.requests.length, 0)
+    h.bridge.refreshAuthorization(); await flush()
+    h.requests[0].resolve({ ok: true, value: authorized() }); await flush()
+    assert.equal(h.bridge.getSnapshot().modeEnabled, true)
+    assert.equal(h.order.filter(value => value === 'remote:mount').length, 2)
+  } finally { await h.dispose() }
+})
+
+test('a stalled initial check times out and its late result cannot reopen the gate', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const h = harness()
+  try {
+    await h.ready()
+    t.mock.timers.tick(35_000); await flush()
+    assert.equal(h.bridge.getSnapshot().authorizationStatus, 'unavailable')
+    assert.match(h.bridge.getSnapshot().error!, /超时/)
+    h.requests[0].resolve({ ok: true, value: authorized() }); await flush()
+    assert.equal(h.bridge.getSnapshot().modeEnabled, false)
+    h.bridge.refreshAuthorization(); await flush()
+    h.requests[1].resolve({ ok: true, value: authorized() }); await flush()
+    assert.equal(h.bridge.getSnapshot().modeEnabled, true)
+  } finally { await h.dispose(); t.mock.timers.reset() }
+})
+
+test('a transport failure preserves a confirmed account and the selected Chat mode', async () => {
+  const h = harness()
+  try {
+    await h.ready()
+    h.requests[0].resolve({ ok: true, value: authorized() }); await flush()
+    h.bridge.selectMode('chat'); await flush()
+    h.requests[1].resolve({ ok: true, value: authorized() }); await flush()
+    assert.equal(h.bridge.getSnapshot().mode, 'chat')
+    h.bridge.refreshAuthorization(); await flush()
+    h.requests[2].reject(new Error('fixture offline')); await flush()
+    assert.equal(h.bridge.getSnapshot().mode, 'chat')
+    assert.equal(h.bridge.getSnapshot().modeEnabled, true)
+    assert.match(h.bridge.getSnapshot().error!, /刷新授权/)
   } finally { await h.dispose() }
 })

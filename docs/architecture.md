@@ -1,6 +1,6 @@
 # 架构与可行性
 
-状态：2026-10-09，Desktop 真实网页嵌入候选版。用户的数据源澄清见 requirements；状态、分工和实际验证见 handoff。静态源码、mock、构建与真实网页验收分别记录。
+状态：2026-10-10，Desktop 真实网页嵌入候选版。用户的数据源澄清见 requirements；状态、分工和实际验证见 handoff。静态源码、mock、构建与真实网页验收分别记录。
 
 ## 固定基线与来源
 
@@ -23,8 +23,12 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 - 官方 `deepseek-account/signed-out`、`deepseek-account/session-expired` 即时关闭门槛。公开 `credentials/record-updated(key)` 只读 key，固定目标 key `deepseek-account-platform/default` 变化先发布 pending 并换 epoch，再安全重读账号资料；不读取 record 内容。
 - 异步资料和 Client unary 回包都有授权代次栅栏，防止登出/换账号后的迟到旧结果重开门槛。Client 首次授权仍保留 Harness，点击进入及窗口重新获得焦点时刷新官方状态。
 - `src/protocol.ts` 使用显式 strict InvocationDescriptor 和 Zod codecs，Host 注册 Typert contribution，Client `$mount`；不依赖 SRC 猜方法。流使用官方 `$stream` 监督重连与取消。
+- Client先`remote.$mount`再`ctx.inject(['remote', 'remote.dshDuo'], ...)`，所有unary/stream调用使用该子Context。仅注入`remote`不包含生成的独立namespace服务；直接从原插件Context调用会抛出`cannot get property "remote.dshDuo" without inject`。不能在挂载前把namespace设为外层必需依赖，造成启动相互等待。
+- 刷新合并在途请求，35秒界面期限覆盖连接与调用，超时传递AbortSignal并隔离迟到回包。挂载失败可重试；初始失败从pending转unavailable，既有有效授权不因网络错误被撤销。HARNESS和CHAT均有错误反馈/刷新入口；插件卸载按依赖先dispose namespace消费者与stream，再撤回contribution。
 
 证据：deepseek-account/src/index.ts:39–93、types.ts:31–56；deepseek-account-platform/src/index.ts:17,147–150,296–343；credentials/src/types.ts:92–102；api/gateway/README.md。服务端撤销只在官方请求拒绝/事件确认时获知，插件不自行推断网络故障为撤销。
+
+2026-10-10复现与回归：发布的Cordis4.0.4/Gateway0.2.0-rc.2上，真实插件Context缺namespace注入必然拒绝；旧集成从root Context调用，假Client Context又未执行依赖限制，所以19项测试漏检。当前server.test在真实Cordis加载生产Client入口，验证初始未授权、恢复授权、进入CHAT、官方登出回退及卸载；账号/carrier/presentation仍是fixture，不替代真实Desktop证据。
 
 ## Client：可逆导航与可达入口
 

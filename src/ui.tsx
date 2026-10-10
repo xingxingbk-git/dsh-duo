@@ -83,6 +83,8 @@ export function DuoModeControl({ bridge, wide }: PropsRuntime<'sidebar.footer.ac
     <DuoStyles />
     <DuoModeSelector bridge={bridge} state={state} compact={!wide} />
     {wide && !state.modeEnabled && <p className="dsh-duo-footnote">{state.availabilityMessage}</p>}
+    {wide && state.error && <p className="dsh-duo-footnote" role="status">{state.error}</p>}
+    {wide && state.authorizationStatus !== 'pending' && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>刷新 DSH 授权状态</button>}
     {wide && state.authorizationStatus !== 'authorized' && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.manageAccount()}>管理 DeepSeek 账号</button>}
   </div>
 }
@@ -94,7 +96,8 @@ export function DuoOverlayControl({ bridge }: PropsRuntime<'shell.overlay'> & Du
   return <aside className="dsh-duo-mode-overlay" aria-label="dsh-duo 模式选择">
     <DuoStyles />
     <DuoModeSelector bridge={bridge} state={state} />
-    {!state.modeEnabled && <span className="dsh-duo-overlay-status" title={state.availabilityMessage}>{state.authorizationStatus === 'pending' ? '正在确认账号授权' : state.authorizationStatus === 'authorized' ? 'CHAT 暂不可用' : '需要 DeepSeek 账号授权'}</span>}
+    {(state.error || !state.modeEnabled) && <span className="dsh-duo-overlay-status" role="status" title={state.error || state.availabilityMessage}>{state.error || (state.authorizationStatus === 'pending' ? '正在确认账号授权' : state.authorizationStatus === 'unavailable' ? '暂时无法确认账号授权' : state.authorizationStatus === 'authorized' ? 'CHAT 暂不可用' : '需要 DeepSeek 账号授权')}</span>}
+    {state.authorizationStatus !== 'pending' && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>刷新授权</button>}
   </aside>
 }
 
@@ -114,6 +117,7 @@ export function DuoChatSidebar({ bridge, collapsed, width }: PropsRuntime<'sideb
     </div>}
     <div className="dsh-duo-spacer" />
     {!collapsed && <p className="dsh-duo-footnote">网页退出状态暂不能由插件直接观察；官网自身控制聊天登录状态。</p>}
+    {!collapsed && state.error && <p className="dsh-duo-footnote" role="status">{state.error}</p>}
     <button type="button" className={collapsed ? 'dsh-duo-icon-button' : 'dsh-duo-account-button'} onClick={() => bridge.manageAccount()} title="返回 HARNESS 管理账号" aria-label="返回 HARNESS 管理 DeepSeek 账号">{collapsed ? '⚙' : <><span className="dsh-duo-avatar" aria-hidden="true">D</span><span><strong>{state.accountLabel || 'DeepSeek 账号'}</strong><small>DSH 账号与设置</small></span><span aria-hidden="true">↗</span></>}</button>
     {!collapsed && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>刷新 DSH 授权状态</button>}
   </aside>

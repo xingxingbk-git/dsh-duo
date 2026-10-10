@@ -105,3 +105,16 @@
 - 验证：冻结安装、typecheck、19/19测试、构建/pack及artifact契约通过。pnpm10的Git安装通过；pnpm11仅--allow-build首次失败，按其打印的准确Git身份配置fixture allowBuilds后通过。把Git身份许可直接套到pnpm10会报INVALID_VERSION_UNION，检查脚本已按实际包管理器主版本分开配置两种许可。没有全局放开依赖脚本，也未改变用户profile的脚本许可。
 - 当前设备修复：官方CLI在desktop profile用hash命名tarball替换损坏的dsh-duo依赖（--ignore-scripts），两个安装入口hash匹配构建；原UI关闭/重新启用插件后，AX/截图显示“运行中”和两个模式控件。界面处于授权pending，未进入官网或发送消息；启用成功不代表聊天、授权或网页历史已验收。
 - 交付/下一步：依本会话既有授权提交推送代码和上下文，远端状态以实际Git核对为准；安装包和构建产物不提交。下一步由用户完成正常授权/网页登录，真实官网、右栏/Session与卸载恢复仍需验证。测试fixture自动清理，没有驻留新增服务。
+
+## W012 · 2026-10-10 · T04/T07/T12/T13 · 授权一直 pending 与本地验收流程
+
+- 触发：用户指出真实Desktop持续显示“正在确认 DSH 的 DeepSeek 账号授权”，不是正常完成状态；W011只确认组件启用，没有验证授权检查收敛。
+- 开工：main基线f6cf716，工作区干净、fetch没有新提交；单Agent排查实际Client/Host调用、Cordis插件Context依赖和失败反馈。当前修复/验证已结束，交还用户验收，没有其他Agent占用文件。
+- 用户新决策：后续修改先本地验收，由用户自行通过Codex右上角手动提交/推送；Agent不自动stage/commit/push，除非另行收到本轮明确Git指令。此前持续推送约定由本条替代，已写入AGENTS，不自动撤销历史提交。
+- 当前限制：无live Inspect，依据目标官方源码和实际发布的Cordis/Gateway包复现；不读取密码/Cookie/token或个人对话。修复、实测与失败尝试结束时补充本条和handoff。
+- 根因已复现：Client挂载贡献后从只inject remote的插件Context读取独立remote.dshDuo，被Cordis拒绝；旧测试调用root Context/宽松fake，漏掉依赖限制。初始错误只保存在connectionError但未改变pending且HARNESS未展示错误/刷新入口，导致永久等待。是否缺typert的猜测被实际挂载成功反证，没有加入无依据依赖。
+- 实现与回归：挂载后动态注入remote.dshDuo，从子Context调用unary/stream；挂载失败可重试，刷新合并并加35秒期限和AbortSignal，初始错误收敛unavailable；普通网络故障不撤销已有有效授权。HARNESS/CHAT显示错误和刷新入口。23/23测试通过，真实Cordis/Gateway加载生产Client，含授权/登出/卸载；纯Client增加失败、重挂载、超时迟到、已授权网络故障测试。
+- 验证调整：首次typecheck要求异步effect每个分支返回cleanup，已修正；测试fake async effect需观察失败Promise，真实Slots fixture改为Cordis Service以拥有正确Context生命周期。最终typecheck/test通过，不能把这些fixture修正当作DSH实测。
+- 当前设备实测：pnpm package:plugin和单lazy工厂/3共享baseline检查通过；14文件tarball SHA256 20bac1a168cdf9587cefecb4d4bc219ee687377f7e082379699cea65372abe19，经官方CLI更新desktop依赖（ignore-scripts），两个安装入口hash匹配。DSH自动重载后授权确认完成，CHAT按钮可用、HARNESS保持选中、pending消失；刷新结果保持；禁用控件撤回、重新启用再次正常确认，AX/截图直接验证。CLI peer泛化warning未妨碍真实加载。未退出账号、加载官网、发送消息或改其他插件。
+- 交接：实际文件/版本/根因/验证分层和下一步已同步handoff；完整官网、历史、CHAT中的退出/卸载、右栏/Session矩阵仍待用户验收。本轮代码与文档均未提交/推送，新设备尚不能取得这份上下文；用户自行验收和手动Git交付。
+- 结束检查：git diff --check通过；main/HEAD仍f6cf716，12个源码/测试/文档文件为未暂存修改，无新增提交或推送，构建产物未进入Git。
