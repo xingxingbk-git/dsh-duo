@@ -156,3 +156,20 @@
 - 最终本地包artifacts/dsh-duo-0.1.1-9654619f1e2f.tgz，SHA256 9654619f1e2fd4dfa0b48b146eb1006e65ba236bf94de876ea4e2113907b8535；官方CLI更新desktop，安装版本0.1.1且Host/Client hash逐项匹配build（完整值见handoff）。CLI泛化peer warning保留，不影响本次启用。前两个候选包已被此最终包取代，接力不要选旧hash。
 - 单Agent工作交还用户验收，无进行中分工；源代码/上下文仅本地，未stage/commit/tag/push，远端仍c169200。仍按用户手动Git流程；本轮接力不再涨号，下轮独立修复为0.1.2。截图本地Git排除，仓库不写个人历史标题/链接/正文或凭据。
 - 收尾git diff --check通过、暂存区为空；preview服务和本轮创建的官网检查/模拟浏览器页关闭。最终DSH保留CHAT、已选官网对话、空输入供用户验收；没有发送消息或留下验收草稿，不新增全球记忆。
+
+## W016 · 2026-10-10 · T03/T06/T08/T13 · 截图交互与界面收敛
+
+- 用户指出切换器需靠右/自动间距、CHAT顶部新会话必须新建Chat、隐藏插件行、删除网页工具按钮和插件底部提示，并询问官网能否共用DSH登录。
+- 单Agent/Codex/macOS；开工main干净，fetch成功，HEAD/origin/main均f3ab5c75ae6580583e5dfd3ca283222269235c85，0/0。此前W014/W015已由用户提交同步，保留历史记录中的当时状态。本轮无stage/commit/tag/push授权。
+- 先同步需求/完成标准，范围自有UI、样式、允许范围内的适配、相关测试和文档。版本0.1.1→计划0.1.2，尚未递增；实际DSH0.2.0-rc.2、Node24.15.0、项目pnpm10.33.2已核对，无live Inspect。
+- 固定SidebarRoot与发布类型再次确认：品牌父级为收缩inline-flex，原新会话回调私有，panellist贡献仅控制图标/标签不控制外层按钮。仅替换图标为null不能隐藏插件行，也不能改变新建回调；尚未实施DSH核心DOM适配。
+- 官方面向浏览器的lease由主进程生成进程内隔离partition；公开deepseekAccount提供Platform/inference会话，未见Chat网页登录SSO桥。继续记录来源/边界，不读取用户凭据。
+- 用户明确选择「允许限定侧栏适配（推荐，保留原侧栏外观）」；已将三个行为与撤回/结构校验边界写入AGENTS和需求。该例外不放宽官网凭据/私有API禁令，也不允许服务猴子补丁、安装包或核心状态修改；原按钮捕获点击包括鼠标/键盘产生的click，菜单/快捷键另列未完成。
+- 版本已于构建前从0.1.1递增为0.1.2一次。初次模拟新建/恢复通过，首次实机却显示侧栏不兼容：固定ui-renderer的SlotOutlet有data-slot/display:contents包装，源码SidebarRoot静态树与实际DOM相差一层，原fixture漏了该层。适配安全退出，没有在错误节点打补丁；已针对准确brand.name包装修正并补fixture，后续打包仍为同轮0.1.2。首次候选包6702d7a11fc6已被后续最终包取代，不用旧包交接。
+- 完成：src/sidebar-adapter从自有品牌Slot校验原侧栏，品牌flex剩余间距自动填充、CHAT隐藏插件行/空nav、原新会话捕获click转交统一门槛下官网new；登录视图/未就绪禁用新建，Harness恢复原状态，Client卸载撤回属性/监听器。绑定归Client、品牌折叠卸载不丢绑定。ui/styles/web-surface删除常驻工具按钮/底部提示，故障卡片保留重试及折叠备用入口；未知结构在自有交互层提示原顶部限制。未改Host授权、依赖、安全策略、安装包、核心状态或其它插件。
+- 验证：pnpm typecheck、test（27/27）、package:plugin/artifact通过；生产适配+DOM fixture验证原顶部鼠标/Enter仅官网新建、无Harness新建、Harness恢复原点击/插件行、登录页禁用、退出恢复/释放及折叠绑定。最后补准确SlotOutlet包装后再次验证顶部Enter/隐藏/无错误提示；浏览器warn/error为空，CSP不联网，不冒称官网实测。
+- 实机最终0.1.2：靠右控件对齐侧栏留白，原材质/真实账号区保留；CHAT插件行隐藏，网页工具按钮/底部提示移除，官网sign_in时原新会话和＋禁用；往返回同一原Harness会话和关闭右栏，折叠备用展开正常。Harness插件页禁用恢复原HARNESS徽标、重启用授权收敛且保持Harness；最终再进入CHAT供验收。没有输入凭据/验证码、登录或发送消息。已登录官网顶部新建、菜单/快捷键、首次登录/发送/跨端历史等未验收/未实现项见handoff。
+- 登录结论限当前已核查公开能力：Platform/API账号授权与独立Browser进程内分区，不存在已确认Chat SSO入口。没有调用Host-only凭据方法或移植Cookie；不能把DSH有效授权说成官网免登录。README只同步影响使用者的功能/权限/限制，全部开发上下文由AGENTS及需求/架构/路线/资料/handoff/worklog维护。
+- 最终包artifacts/dsh-duo-0.1.2-373eab046e75.tgz，SHA256 373eab046e7518c4ff8ead34944d3b9c54cbfc80fe099e7490ec9ee3b59d68fb；16白名单文件、单lazy工厂/3共享baseline。官方CLI更新desktop，实际0.1.2、Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client hash 2e39529e8fece89140ef4efa053bd4c3f49bea7b1c2be0cf6efab418628b3604均匹配。中间2cae9acb7dce及首包均被最终包取代。CLI泛化peer warning仍记录，没有冒称零警告。
+- 本阶段完成并交还用户验收，无进行中负责人；main仍f3ab5c7，本轮源码/上下文仅本地，未stage/commit/tag/push。临时preview服务/浏览器页关闭；实机截图output/playwright/dsh-duo-0.1.2-chat.png仅本地Git排除。最终DSH保持CHAT官网登录视图，无测试草稿或消息，不写全球记忆。下一轮独立修复0.1.3，本轮不可再重复涨号。
+- 收尾检查：8份当前Markdown链接/代码围栏及git diff --check通过；暂存区为空，15份当前源码/文档文件为本地修改/新增，HEAD/origin仍f3ab5c7且0/0。最终包内README与工作区hash一致，所有产物/截图均未进入Git；没有本轮远程安装新提交的验证，因为尚未推送。

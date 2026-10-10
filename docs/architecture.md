@@ -35,11 +35,12 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 `src/core/mode.ts` 集中管理授权门槛、mode 和原 `activePanelId`（包括 null）。Client 只调用公开 `layout.panelInfo.getSnapshot()/subscribe()` 和 `selectPanel()`；没有 Session/core 状态写入或盲目 close/open 右栏。
 
 - `main` 自有键 `dsh-duo.chat`。独立 main 按官方布局自然隐藏 Harness 右栏；退出先恢复原 panel，再 dispose Chat 覆盖项。
-- Harness侧栏/navigation原树保留；`sidebar.brand.name`仅替换装饰内容：官方DeepSeek字标（自有SVG视口裁掉HARNESS徽标）及自有锚点。实际按钮是官方additive `shell.overlay` 的独立组件，ref/ResizeObserver/IntersectionObserver只测自己的元素；不查改核心DOM，不复制/包装未导出的SidebarRoot。
+- Harness侧栏/navigation原树保留；`sidebar.brand.name`仅替换装饰内容：官方DeepSeek字标（自有SVG视口裁掉HARNESS徽标）及自有锚点。实际按钮是官方additive `shell.overlay`的独立组件；不复制/包装未导出的SidebarRoot。W016新增用户批准的有限侧栏DOM适配，见下一条。
+- `src/sidebar-adapter.ts`从自己的品牌元素沿已核对rc.2祖先结构定位侧栏，先识别renderer的data-slot=sidebar.brand.name/display:contents包装，再校验aria-hidden品牌identity、data-window-drag行和直接子级新会话按钮；只加自有前缀的临时属性，以flex填满品牌间距、CHAT隐藏插件行/空导航区，捕获原新会话click并转交受门槛保护的官网new。官网未就绪/登录页时禁用该新建按钮；HARNESS恢复原disabled和点击行为，卸载移除属性/监听器并恢复原值。绑定归Client所有，品牌因折叠卸载时仍保持，展开重新绑定、Client卸载撤回。观察范围仅该root的childList；不改Session、私有服务或安装包。未知结构不适配，并在自有交互层提示顶部仍为HARNESS语义；不能称为官方新建接口。
 - 品牌owner的aria-hidden/外层New Session仍存在，交互层在该祖先外，提供按键与屏幕阅读器语义。rc.2品牌行24px且会裁剪，锚点为112×24px；完全可见才发布矩形，折叠/裁剪时隐藏，重新可见时恢复。底部和右下角旧入口已移除；正常授权无常驻刷新，故障时在顶部说明并重试。Mac实测通过，Web/Windows外层按钮及其他平台仍需实测。
 - 两种模式共用原生SidebarRoot及shell.leading。仅CHAT期间通过slots.inject注册 `sidebar.workspaces`，退出后dispose恢复工作区；owner仅wide/expandSidebar。顶部窗口/品牌/新会话视觉、底部真实settings及背景透明/模糊由原组件持续管理，不创建另一套侧栏。
 - Mac折叠时main扩展至窗口左沿，保活网页层会覆盖原shell.leading。品牌锚点不可见时，网页工具条通过公开layout.toggleSidebar提供展开入口和备用模式按钮；展开后撤回备用控件，不改原shell.leading注册。
-- 原顶部新会话按钮、菜单与快捷键调用私有注入的uiWorkspace.startSession，没有公开模式替换回调，保留HARNESS行为；CHAT新建使用列表标题旁的＋操作官网。监听主面板离开CHAT后清理覆盖，不改写原导航选择；不能保证原新建路径的Session保真。此限制仍未解决，不能声称顶部按钮已统一CHAT语义。
+- 原菜单/快捷键仍调用uiWorkspace.startSession，没有公开模式替换回调；W016有限例外仅处理顶部鼠标/键盘激活click及非Mac品牌按钮，列表＋仍可新建。监听主面板离开CHAT后清理覆盖，不改写原导航选择；不能把顶部按钮结果当作菜单/快捷键Session保真。
 - 所有注册与 stream 都由 Cordis enclosing effect 管理，末尾清理先恢复 panel，再卸载贡献和 guest。完整 Desktop 卸载恢复还需真实验收。
 
 证据：ui-layout/src/client/service.ts:18–49、AppFrame.tsx:40–42；ui-sidebar/src/client/index.ts:65–99、SidebarRoot.tsx:223–249,304–310；ui-slots/src/index.ts:1241–1246；shortcuts/src/client/native.ts:17–30。
@@ -64,7 +65,9 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 `src/website-navigation.ts`为自包含DOM适配函数，经Electron公开webview.executeJavaScript仅在插件持有的批准guest执行。限定HTTPS官方origin及已在页面出现的 `/a/chat/s/<id>` 链接，读取标题/分组/选中路径，不访问正文、Cookie、storage、应用私有全局、凭据或请求接口。没有额外依赖、preload或安全策略修改。
 
-网页导航以窄列几何、真实历史链接、新对话标签及不含编辑器等条件定位；原生列表按页面次序分组，可搜索已加载标题，点击真实页面链接/新建元素，加载更早时滚动原网页列表。承接成功才加入可撤回的局部style隐藏网页侧栏；用户可通过工具条“官网导航”恢复原页面账号/搜索/管理入口。没有项目创建、假历史或另一份聊天数据。页面结构变化或出错清空镜像、撤回隐藏样式并提示使用官网原导航。
+网页导航以窄列几何、真实历史链接、新对话标签及不含编辑器等条件定位；原生列表按页面次序分组，可搜索已加载标题，点击真实页面链接/新建元素，加载更早时滚动原网页列表。承接成功才加入可撤回的局部style隐藏网页侧栏；页面结构变化或出错清空镜像、撤回隐藏样式并提示使用官网原导航。W016按用户截图删除常驻“刷新网页”“官网导航”按钮及底部提示条，网页故障卡片中保留重试；折叠备用展开/模式入口保留。原导航管理入口不再由工具条提供，尚不能称为官网所有操作已镜像。没有项目创建、假历史或另一份聊天数据。
+
+W016登录核查：固定deepseek-account-platform默认Platform origin为platform.deepseek.com、inference origin为api.deepseek.com；公开PlatformSession仅用于平台嵌入，Browser acquire由主进程生成进程内隔离partition。未发现面向chat.deepseek.com的官方SSO/凭据交换入口，因此本版不实现共用登录，也不调用Host-only凭据方法或迁移Cookie。重启网页登录失效来自分区生命周期，不能归因于DSH授权失败。
 
 每1.2秒串行刷新可见导航，HARNESS期间不执行适配；卸载/授权代次变化撤回动作绑定和guest。Client同时限定模式/门槛/代次及已加载链接，旧账号回包不能污染新列表。网页返回payload按非信任输入过滤origin、大小和类型，标题仅作React文本。登录页路径只能说明页面在登录视图，不证明DSH授权失效或两处账号相同，不自动回HARNESS。
 

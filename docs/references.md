@@ -108,3 +108,10 @@ Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可�
 - [固定Workspace导航实现](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-workspace/src/client/navigation.ts)：startSession直接选择/建立Harness会话，无公开模式替换或veto回调；本轮没有猴子补丁或修改该服务。
 - [Electron公开webview.executeJavaScript](https://www.electronjs.org/docs/latest/api/webview-tag#webviewexecutejavascriptcode-usergesture)：仅用于插件自己的批准guest中执行用户已允许的DOM界面适配。文档为当前公开API，目标rc.2实际方法可用性另由本机列表/新建/选中实测确认，不能写成DSH提供了历史API。
 - 本轮成功重读官方Slots文档及上述固定navigation/index源码；官网实际可访问导航链接结构由本机页面观察确认。只保存技术证据和结果摘要，不将个人历史标题/链接或正文写入仓库文档。
+
+## W016侧栏与共用登录核查（2026-10-10）
+
+- [rc.2 SidebarRoot](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/SidebarRoot.tsx)及[原生样式](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/SidebarRoot.module.css)：新会话/全局面板外层由shell控制，品牌identity/name为收缩inline-flex。本轮读固定源码与发布类型；无live Inspect。用户明确批准有限DSH侧栏适配，不把临时属性/capture事件称为官方扩展回调。
+- [rc.2 DeepSeekAccount](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account/src/index.ts)及[Platform实现](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account-platform/src/index.ts)：默认Platform为platform.deepseek.com，inference为api.deepseek.com，Host-only PlatformSession不是Chat网页登录SSO。
+- [rc.2 Browser guests](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/apps/desktop/src/browser-guests.ts)：acquire生成不带persist前缀的进程内隔离partition，不共享系统浏览器或DSH账号会话。结合公开Account/Browser面，在本版本未发现Chat免登录桥；结论仅限已核查公开能力，不宣称服务方永远不支持。
+- 当前官方Slots文档成功浏览；web工具对两处raw URL返回Internal Error后，使用HTTPS下载固定公开源码核查，不读取本机凭据或改部署。截图/AX显示DSH已授权但官网处于sign_in；不将上轮曾登录状态写成当前状态。

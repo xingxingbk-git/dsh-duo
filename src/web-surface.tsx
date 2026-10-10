@@ -214,8 +214,6 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
       {state.brandAnchor === null && <button type="button" onClick={() => bridge.toggleSidebar()} aria-label="显示或隐藏侧边栏"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M7 3v14" stroke="currentColor" strokeWidth="1.4"/></svg></button>}
       <strong>DeepSeek 官网</strong><small>chat.deepseek.com</small>
       <span className="dsh-duo-web-toolbar-spacer" />
-      <button type="button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled || state.authorizationStatus !== 'authorized'} title="刷新或重建真实网页，未发送的网页草稿可能丢失">{state.webError !== null ? '重试网页' : '刷新网页'}</button>
-      <button type="button" onClick={() => bridge.toggleWebsiteNavigation()} aria-pressed={state.showWebsiteNavigation} title="查看官网原导航与网页账号设置">官网导航</button>
       {state.brandAnchor === null && <DuoModeSelector bridge={bridge} state={state} />}
     </header>
     <div className="dsh-duo-web-content">
@@ -233,8 +231,8 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
       {(nativeBrowser === undefined || state.webError !== null || activeReservation === null) && <div className={`dsh-duo-web-status${state.webError !== null ? ' dsh-duo-web-status-error' : ''}`} role={state.webError !== null ? 'alert' : 'status'}>
         <strong>{nativeBrowser === undefined ? '当前环境无法内嵌网页' : state.webError !== null ? '网页暂时无法使用' : '正在打开 DeepSeek 官网'}</strong>
         <p>{state.webError || (nativeBrowser === undefined ? '需要提供官方浏览器能力的 DSH 桌面版。' : '网页登录后，由官网显示该账号的聊天和历史。')}</p>
+        {state.webError !== null && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled}>重试网页</button>}
       </div>}
     </div>
-    <div className="dsh-duo-web-disclaimer" role="status">{state.webLoading ? '正在加载网页… ' : ''}网页登录独立于 DSH 授权；聊天和历史由官网提供，插件不读取网页账号凭据。</div>
   </section>
 }

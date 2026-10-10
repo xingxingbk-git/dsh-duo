@@ -8,6 +8,7 @@ import { CHAT_PANEL, ModeController, type ModeAuthorization } from '../src/core/
 import { DuoBrandName, DuoBrandControl, DuoChatPanel, DuoChatNavigation, useDuo, type DuoUIBridge, type DuoViewState, type DuoViewportRect } from '../src/ui.js'
 import { DuoWebSurface } from '../src/web-surface.js'
 import { adaptWebsiteNavigation, emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from '../src/website-navigation.js'
+import { createSidebarBinding } from '../src/sidebar-adapter.js'
 
 const rootElement = document.getElementById('preview-root')!
 type LedgerEntry = { sequence: number; action: string; lease?: string; storageKey?: string; url?: string }
@@ -26,11 +27,13 @@ let webLoading = false
 let webError: string | null = null
 let viewport: DuoViewportRect | null = null
 let brandAnchor: DuoViewportRect | null = null
+let sidebarAdapted: boolean | null = null
 let websiteNavigation = emptyNavigation()
 let showWebsiteNavigation = false
 let navigationHandler: ((command: WebsiteCommand) => Promise<void>) | null = null
 let fixtureWebsiteMode: 'ready' | 'empty' | 'sign-in' | 'unsupported' = 'ready'
 let cached: DuoViewState
+let sidebar: ReturnType<typeof createSidebarBinding> | undefined
 let panelInfo: PanelInfo = { activePanelId: 'harness.original' as MainPanelId }
 
 function record(entry: Omit<LedgerEntry, 'sequence'>): void {
@@ -94,10 +97,11 @@ function publish(): void {
     mode: state.mode, modeEnabled: controller.canEnter(), authorizationStatus: state.authorization.status,
     availabilityMessage: authorized ? '开发模拟：DSH 账号授权有效，网页容器不联网。' : '开发模拟：请使用上方按钮确认 DSH 账号授权。',
     accountLabel: authorized ? `模拟账号 ${state.authorization.accountId}` : null,
-    error: state.error ?? (state.authorization.error ? '开发模拟：授权检查失败，请重试。' : null), desktopAvailable: true, webLoading, webError, viewport, brandAnchor,
+    error: state.error ?? (state.authorization.error ? '开发模拟：授权检查失败，请重试。' : null), desktopAvailable: true, webLoading, webError, viewport, brandAnchor, sidebarAdapted,
     accountStorageKey: authorized && state.authorization.accountId ? `preview:website:${state.authorization.accountId}` : null,
     authorizationGeneration, websiteReloadRevision, websiteNavigation, showWebsiteNavigation,
   }
+  sidebar?.sync()
   for (const listener of listeners) listener()
 }
 
@@ -137,6 +141,7 @@ const bridge: DuoUIBridge = {
     brandAnchor = next; publish()
   },
   reloadWebsite: () => { websiteReloadRevision++; publish() },
+  attachSidebar: element => { sidebar?.attach(element) },
   reportWebsiteState: (generation, state) => {
     if (generation !== authorizationGeneration) return
     webLoading = state.loading
@@ -148,6 +153,8 @@ const bridge: DuoUIBridge = {
   commandWebsite: command => { if (cached.mode === 'chat' && cached.modeEnabled) void navigationHandler?.(command) },
   toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },
 }
+sidebar = createSidebarBinding(() => ({chat:cached.mode === 'chat',canCreate:cached.modeEnabled && websiteNavigation.canCreate}),
+  () => bridge.commandWebsite({type:'new'}), ready => { if (sidebarAdapted !== ready) { sidebarAdapted = ready; publish() } })
 controller.subscribe(publish)
 publish()
 
@@ -168,7 +175,8 @@ function simulateGuest(element: HTMLElement): void {
   fixtureDoc.body.innerHTML = '<aside><button>开启新对话</button><div>置顶</div><a href="/a/chat/s/fixture-a">模拟对话 A</a><div>昨天</div><a href="/a/chat/s/fixture-b">模拟对话 B</a></aside><main><textarea aria-label="fixture draft">fixture draft</textarea></main>'
   Object.assign(fixtureDoc.querySelector('aside')!, {getBoundingClientRect: () => ({width:280,height:600,left:0,top:0,right:280,bottom:600})})
   let fixturePath = '/a/chat/s/fixture-a'
-  fixtureDoc.querySelector('button')!.addEventListener('click', () => { fixturePath = '/' })
+  let fixtureNewCount = 0
+  fixtureDoc.querySelector('button')!.addEventListener('click', () => { fixturePath = '/'; fixtureNewCount++ })
   fixtureDoc.querySelectorAll('a').forEach(link => link.addEventListener('click', event => { event.preventDefault(); fixturePath = link.getAttribute('href')! }))
   Object.assign(element, { loadURL: load, getURL: () => currentUrl, reload: () => { void load(currentUrl) }, executeJavaScript: async (code: string) => {
     const prefix = ')(document,location,'
@@ -183,6 +191,8 @@ function simulateGuest(element: HTMLElement): void {
     const result = adaptWebsiteNavigation(fixtureDoc, {origin:'https://chat.deepseek.com',pathname:fixtureWebsiteMode === 'sign-in' ? '/sign_in' : fixturePath}, command)
     history.forEach((link,index) => link.setAttribute('href',savedLinks[index]!))
     element.setAttribute('data-preview-original-navigation',fixtureDoc.getElementById('dsh-duo-website-navigation-style') ? 'hidden' : 'visible')
+    element.setAttribute('data-preview-path',fixturePath)
+    element.setAttribute('data-preview-new-count',String(fixtureNewCount))
     return result
   } })
   const style = document.createElement('style')
@@ -256,8 +266,11 @@ function Preview() {
       <aside className="preview-harness-sidebar" aria-label="共用原侧栏模拟外壳">
         <button type="button" onClick={() => layout.toggleSidebar()} aria-label="切换模拟侧栏折叠">☰</button>
         {/* Match rc.2's clipped 24px brand identity so visibility regressions are observable. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 24, marginTop: 18, marginBottom: 34, overflow: 'hidden', flexShrink:0 }} aria-hidden="true"><FishLogo size={24} />{!sidebarCollapsed && <DuoBrandName {...slotProps} bridge={bridge} />}</div>
-        {!sidebarCollapsed && <button type="button" onClick={() => layout.selectPanel('harness.original')}>新会话（原 Harness）</button>}
+        <div data-window-drag style={{ display: 'flex', alignItems: 'center', height: 24, marginTop: 18, marginBottom: 34, overflow: 'hidden', flexShrink:0 }}>
+          <span style={{ display:'inline-flex', flex:1, minWidth:0 }}><span aria-hidden="true" style={{ display:'inline-flex', alignItems:'center', gap:8, height:24, minWidth:0 }}><span><FishLogo size={24} /></span><span style={{display:'inline-flex', minWidth:0}}><div data-slot="sidebar.brand.name" style={{display:'contents'}}>{!sidebarCollapsed && <DuoBrandName {...slotProps} bridge={bridge} />}</div></span></span></span>
+        </div>
+        <button type="button" aria-label="新建会话" onClick={() => { record({action:'harness-new-session'}); layout.selectPanel('harness.original') }}>新会话</button>
+        <nav aria-label="全局面板"><button type="button" aria-label="插件" onClick={() => layout.selectPanel('plugins')}>插件</button></nav>
         <div style={{flex:1,minHeight:0,marginTop:20}}>{sidebarMounted ? <DuoChatNavigation {...slotProps} bridge={bridge} wide={!sidebarCollapsed} expandSidebar={() => layout.toggleSidebar()} /> : <nav aria-label="原 Harness 模拟导航"><strong>原工作区</strong><span>原会话与文件面板</span></nav>}</div>
         {!sidebarCollapsed && <div className="preview-ledger" aria-label="网页容器生命周期">
           <strong>状态：{state.mode.toUpperCase()} / {state.authorizationStatus}</strong><br />

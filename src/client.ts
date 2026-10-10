@@ -11,6 +11,7 @@ import { DuoBrandName, DuoBrandControl, DuoChatNavigation, DuoChatPanel } from '
 import type { DuoUIBridge, DuoViewState, DuoViewportRect } from './ui.js'
 import { DuoWebSurface } from './web-surface.js'
 import { emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from './website-navigation.js'
+import { createSidebarBinding } from './sidebar-adapter.js'
 
 export const name = 'dsh-duo'
 export const inject = ['slots', 'layout', 'remote']
@@ -42,11 +43,13 @@ export function apply(ctx: Context): void {
   let navigationAttempt = 0
   let viewport: DuoViewportRect | null = null
   let brandAnchor: DuoViewportRect | null = null
+  let sidebarAdapted: boolean | null = null
   let websiteNavigation = emptyNavigation()
   let showWebsiteNavigation = false
   let navigationHandler: ((command: WebsiteCommand) => Promise<void>) | null = null
   let bridge: DuoUIBridge
   let cached: DuoViewState
+  let sidebar: ReturnType<typeof createSidebarBinding> | undefined
   const mode = new ModeController({
     readPanel: () => ctx.layout.panelInfo.getSnapshot().activePanelId,
     selectPanel: panel => { ctx.layout.selectPanel(panel as MainPanelId | null) },
@@ -70,11 +73,12 @@ export function apply(ctx: Context): void {
       mode: state.mode, modeEnabled: mode.canEnter(), authorizationStatus: state.authorization.status,
       availabilityMessage: availability(), accountLabel: state.authorization.status === 'authorized' ? 'DSH 账号已授权' : null,
       error: state.error ?? connectionError ?? (state.authorization.error ? 'DSH 账号状态刷新遇到网络或服务问题。' : null),
-      desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport, brandAnchor,
+      desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport, brandAnchor, sidebarAdapted,
       accountStorageKey: state.authorization.status === 'authorized' && state.authorization.accountId
         ? `dsh-duo:website:${state.authorization.accountId}` : null,
       authorizationGeneration, websiteReloadRevision, websiteNavigation, showWebsiteNavigation,
     }
+    sidebar?.sync()
     for (const listener of listeners) listener()
   }
   function acceptAuthorization(value: AuthorizationState): void {
@@ -197,6 +201,7 @@ export function apply(ctx: Context): void {
       if (brandAnchor?.left === next?.left && brandAnchor?.top === next?.top && brandAnchor?.width === next?.width && brandAnchor?.height === next?.height) return
       brandAnchor = next; publish()
     },
+    attachSidebar: element => { sidebar?.attach(element) },
     reportWebsiteState: (generation, state) => {
       if (disposed || generation !== authorizationGeneration) return
       webLoading = state.loading; webError = state.error; publish()
@@ -219,6 +224,12 @@ export function apply(ctx: Context): void {
     },
     toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },
   }
+  sidebar = createSidebarBinding(() => {
+    const state = mode.getSnapshot()
+    return { chat: state.mode === 'chat', canCreate: mode.canEnter() && websiteNavigation.canCreate }
+  }, () => bridge.commandWebsite({ type: 'new' }), ready => {
+    if (sidebarAdapted !== ready) { sidebarAdapted = ready; publish() }
+  })
   publish()
   // The enclosing effect's final cleanup restores navigation before registered main keys disappear.
   ctx.effect(() => {
@@ -235,7 +246,7 @@ export function apply(ctx: Context): void {
     void refreshAuthorization()
     return () => {
       navigationAttempt++
-      mode.dispose(); stopPanel(); stopMode(); disposed = true; lifetime.abort(); listeners.clear()
+      mode.dispose(); sidebar?.dispose(); stopPanel(); stopMode(); disposed = true; lifetime.abort(); listeners.clear()
       globalThis.removeEventListener('focus', refreshOnFocus)
     }
   }, 'dsh-duo reversible website UI')

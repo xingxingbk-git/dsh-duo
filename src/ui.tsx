@@ -31,6 +31,7 @@ export interface DuoViewState {
   readonly websiteReloadRevision: number
   readonly viewport: DuoViewportRect | null
   readonly brandAnchor: DuoViewportRect | null
+  readonly sidebarAdapted: boolean | null
   readonly websiteNavigation: WebsiteNavigation
   readonly showWebsiteNavigation: boolean
 }
@@ -45,6 +46,7 @@ export interface DuoUIBridge {
   attachViewport(element: HTMLElement | null): void
   updateViewport(rect: DuoViewportRect | null): void
   updateBrandAnchor(rect: DuoViewportRect | null): void
+  attachSidebar(element: HTMLElement): void
   reloadWebsite(): void
   reportWebsiteState(generation: number, state: { readonly loading: boolean; readonly error: string | null }): void
   reportWebsiteNavigation(generation: number, value: unknown): void
@@ -101,6 +103,7 @@ export function DuoBrandName({ bridge }: PropsRuntime<'sidebar.brand.name'> & Du
     const element = anchor.current
     const group = name.current
     if (!element || !group) return
+    bridge.attachSidebar(group)
     let visible = false
     const measure = () => {
       const rect = element.getBoundingClientRect()
@@ -149,6 +152,7 @@ export function DuoBrandControl({ bridge }: PropsRuntime<'shell.overlay'> & DuoB
     <DuoStyles />
     <DuoModeSelector bridge={bridge} state={state} />
     <DuoAuthorizationNotice bridge={bridge} state={state} />
+    {state.sidebarAdapted === false && <div className="dsh-duo-authorization-notice" role="alert">当前侧栏不兼容：顶部新会话仍使用 HARNESS。CHAT 请使用对话列表旁的＋。</div>}
   </div>
 }
 
