@@ -109,3 +109,17 @@ Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git
 Host Config只有language这一volatile非凭据字段；Client使用configForms唯一entry id dsh-chat，官网确认读回后保存。先恢复保存的语言再允许写入新值，避免guest默认语言覆写偏好；账号代次隔离。ConfigEditor写官方Cordis profile patch，不使用私有settings.json或站点storage。32项单测与15项公开DOM夹具只证明对应分支；官方profile落盘已实测，彻底重启后的恢复仍未复验。
 
 网页登录持久化仍未修复：公开DesktopBrowserBridge.acquire(workspace)不接受持久选项，主进程生成随机无persist前缀partition并强制lease匹配；插件Host子进程没有公开Session管理能力。核查时master也相同。见browser-session-capability.md；未修改安装包、User-Agent、安全策略或凭据。
+
+
+## W021标题与语言恢复修正（2026-10-10）
+
+website-header由强制全宽flex改为自然宽度block，限定48px顶行与最大宽度省略，清除已识别标题/顶行border、radius与shadow；不改变正文。标记不匹配撤回，已存在的插件样式也更新，避免热更新沿用旧CSS。
+
+Host语言默认zh-CN；Client兼容旧空配置，以中文发恢复命令并等官网确认后保存。新文档空快照/登录页重置偏好恢复代次；带settings的loading是多步设置流程，不重置，避免恢复请求循环。显式system/en继续按保存配置恢复。
+
+本机rc.2实际主进程仍为随机无persist前缀partition并强制lease分区匹配。2026-10-10再次核查官方master d743267388641bc76f17c45ce8b4c231aed1d32c（0.2.1-alpha.2）同样明确Cookie和网页存储无法跨应用重启。没有插件公开修复路径；未改宿主、未迁移凭据。
+
+
+## W022标题编辑状态修正（2026-10-10）
+
+官网重命名用input替换展示文字，旧精确标题匹配不能继续作为唯一锚点。适配器保留确认过的顶行与标题专属包装，编辑框只在公开顶行内识别，不读value；整枝替换时仅通过宽顶行与内容右缘分享恢复。标题包装同样移除圆角/outline，编辑框显示蓝色底线并继续由官网处理改名。观察class/type/contenteditable/role变更，排除插件data/style操作；restore清除新增标记。真实展开/收起点击均保持位置，点击空白结束编辑后恢复标题；Esc在收起状态仍留编辑框，不能当作取消改名证据。

@@ -4,7 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { DshChatController } from './server.js'
 
 export const Config = schema.object({
-  language: schema.union(['', 'system', 'zh-CN', 'en']).default('').volatile(),
+  language: schema.union(['', 'system', 'zh-CN', 'en']).default('zh-CN').volatile(),
 })
 
 export const name = 'dsh-chat'

@@ -1,5 +1,9 @@
 # dsh-chat：Agent / Codex 开发指南
 
+## W022当前状态（2026-10-10）
+
+当前本地修复为0.1.7：修复点击标题进入官网重命名时标记失配、退回居中圆角框的问题；展开/收起的真实点击和结束编辑均已在DSH确认左对齐。构建及官方CLI安装成功，安装Host/Client/用户SVG与本地逐字节一致。上一轮默认中文与偏好恢复保留；跨退出网页登录仍受宿主公开能力限制。未新增/运行测试、未stage/commit/push。分工已结束，完整证据与Esc观察见docs/handoff.md顶部W022；下方状态均为历史记录。
+
 ## 项目目标
 为 DSH 提供可逆的 CHAT / HARNESS 模式切换。项目入口为 `src/index.ts`（Host）与 `src/client.ts`（Web Client）；bundle/client manifest 在 `package.json`，Cordis profile layer 在 `cordis.patch.yml`。完整需求见 [docs/requirements.md](docs/requirements.md)，版本与扩展契约见 [docs/architecture.md](docs/architecture.md)。
 

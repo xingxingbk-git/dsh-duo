@@ -291,3 +291,38 @@ W019最终打包收尾：19文件包1d5ab1718f12（完整哈希见handoff），�
 - 最新 AGENTS/manifest 已使用 dsh-chat、版本 0.1.5。新 URL 的 `git ls-remote` 与 HEAD 一致，origin 从旧 HTTPS dsh-duo 地址更新为 `https://github.com/xingxingbk-git/dsh-chat.git`；复核 HEAD/origin/main 为 0/0。
 - 主 Agent 负责唯一 Git 写操作与上下文记录，ui_contract 仅只读拉取前文档；拉取后最新授权和交付规则由主 Agent 读取。仅改两份上下文同步记录，不修改功能或 README，不新增运行验收，不涨版本，不 stage/commit/push；记录保留本地供用户手动提交。
 - 起初默认 cwd 失效导致命令无法创建，改用真实目录和显式 shell/workdir 后恢复；无需修改安装包或恢复旧路径。Git 元数据与新目录写入经工具权限提升完成，无丢弃本地修改或强推。下一步按最新 W019 交接继续；本轮没有运行构建/测试或重装插件。
+
+
+## W021 · 2026-10-10 · 标题边框与默认中文
+
+用户要求修正截图顶部圆角边框，默认中文，并记住网页登录。基线main da52800、工作区干净；root负责语言与集成，layout_fix仅修改website-header.ts，session_capability只读核查宿主/上游能力。版本0.1.5→0.1.6一次；不stage/commit/push。
+
+标题原实现将叶节点撑满全宽且未撤回站点装饰，本次改自然宽度单行并清除边框/圆角/阴影、保持正文48px占位与分享对齐。中文修复补Host默认值、旧空配置兜底与新文档重新恢复；设置流程loading带settings不重置恢复，以免循环。
+
+独立核实本机rc.2与当前上游0.2.1-alpha.2仍只有进程内网页登录；没有公开持久partition接口，因此登录记忆仍受阻，未改DSH安装包或凭据。独立公开浏览器仅查看登录页后关闭；未填写账号、验证码或发送消息。
+
+项目原node_modules缺少锁内设置相关包，完整依赖类型检查起初失败；按现有锁重建项目依赖，未改依赖版本/锁文件。node scripts/build.mjs成功（生产类型检查、Host ESM、Client单lazy工厂/4共享模块）；本轮未新增或运行测试。npm pack包含19个发布文件。唯一候选artifacts/dsh-chat-0.1.6-1e90ba1cebae.tgz，SHA256 1e90ba1cebae18789dcef3af025572d843dc9cc5b920837c6d18534d81d7cbc4；官方CLI安装及本机查看结果在收尾补充。
+
+## W021本机收尾
+
+- 官方CLI安装唯一0.1.6包exit0，+1/-2；原Git来源脚本忽略警告和泛化peer warning保留，不报告无警告安装。最终依赖为本地hash tarball，不是已推送的新Git提交。
+- 已安装版本0.1.6；Host SHA256 72fc3b73309f22d174d374351db3806332d96c15f4744649a752a72669653ad9，Client afe9d383a261ee7617633bfc296126210d63e5f333ce807cb1ca73de3f0bf4c4，用户SVG ad1b0fda90c1c1f2a0b9208bc86f5fe8c21d505a1208576be4e3110b26b4f79c，均与本地lib/assets逐字节一致。
+- 通过原生UI进入更新后的CHAT并选择用户截图已指定的对话。仅采集顶部标题与底部工具条：展开、收起时标题/分享同顶行，无大圆角边框；实际工具按钮为中文。本插件profile语言为zh-CN。恢复展开并保留CHAT，没有退出DSH、重新登录或发送消息。
+- 顶部/工具条截图只在本机临时目录，不纳入Git。辅助功能临时标志收尾恢复原值；当前分工均结束，交还用户验收。
+- 跨完整应用退出的语言恢复未实机验证；默认值/新文档恢复有源码与构建证据。本轮未新增/运行测试。认证持久化仍受宿主限制，没有宣称免登录已修复。
+- 代码与文档保留本地，未stage/commit/push；另一设备/仓库URL尚不能取得0.1.6。
+
+
+## W022 · 2026-10-10
+
+用户反馈点击标题后又出现居中圆角框。W021只查看了展示状态，漏了官网重命名状态；本轮已在真实DSH复现，版本0.1.6→0.1.7一次，保留上一轮中文偏好修复与登录持久化限制。
+
+- 原因：官网点击后用input替换文字节点，旧标题匹配失效并移除整行标记。
+- 修复：保留标题专属宿主，限定48px公开顶行识别编辑框及分享；包装清除圆角、边框、阴影和outline，输入显示左侧蓝色底线。恢复候选要求宽顶行和内容右缘，避免把输入框清除图标当分享。不读输入值、不改变官网改名处理。
+- 观察：增加class/type/contenteditable/role变更，排除自身data与style属性，清理新增宿主/编辑标记。
+- 构建：生产类型检查、Host ESM、Client lazy工厂及4共享模块契约通过；未新增或运行测试。layout_fix/header_interaction_review只读审查结束，root实现及安装。
+- 官方CLI安装0.1.7成功（exit0，+1/-2，pnpm11.7.0）；有泛化peer warning，不报告零警告。唯一包artifacts/dsh-chat-0.1.7-0a7a9c5c716e.tgz，19文件，SHA256 0a7a9c5c716e9d79223af9e329f2fcec266c35ae4f661e3ac37f661503f1a42e。
+- 安装与本地逐字节一致：Host 72fc3b73309f22d174d374351db3806332d96c15f4744649a752a72669653ad9；Client 575dcacf10effd009e5b03ce80be08459d99277c502d1364a5da481290c76965；用户SVG ad1b0fda90c1c1f2a0b9208bc86f5fe8c21d505a1208576be4e3110b26b4f79c。
+- 实机：打开用户指定对话，展开/收起分别实际点击标题，编辑框均保持左侧、分享同顶行，无圆角胶囊；点击顶行空白结束编辑后两种状态都恢复自然宽度标题。收起时按Esc仍留在官网编辑状态但布局正确，因此不声称Esc取消改名已验证；本轮没有添加键盘处理。
+- 仅采集48px顶行，本机临时截图为dsh-chat-title-edit-expanded-017.png、dsh-chat-title-edit-collapsed-017.png、dsh-chat-title-blurred-collapsed-017.png和dsh-chat-title-final-017.png。没有读取输入值、修改原标题、发送消息或退出DSH。恢复展开/CHAT与辅助功能原false标志。
+- 未stage/commit/push；安装来源为本地hash tarball，仓库链接和其他设备尚不能取得此修复。下面W021及更早记录均是历史证据。

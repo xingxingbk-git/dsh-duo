@@ -17,6 +17,7 @@ import { createSidebarBinding } from './sidebar-adapter.js'
 export const name = 'dsh-chat'
 export const inject = ['slots', 'layout', 'remote']
 const AUTHORIZATION_TIMEOUT_MS = 35_000
+const DEFAULT_WEBSITE_LANGUAGE = 'zh-CN'
 
 function desktopBrowser(): DesktopBrowserBridge | undefined {
   const desktop = (globalThis as typeof globalThis & {
@@ -227,6 +228,11 @@ export function apply(ctx: Context): void {
     reportWebsiteNavigation: (generation, value) => {
       if (disposed || generation !== authorizationGeneration) return
       try { websiteNavigation = parseWebsiteNavigation(value) } catch { websiteNavigation = { ...emptyNavigation(), status: 'unsupported' } }
+      // A new website document has lost its temporary adapter markers. Apply
+      // the saved language again after login/reload, even for the same DSH account.
+      if ((websiteNavigation.status === 'loading' && !websiteNavigation.settings) || websiteNavigation.status === 'sign-in') {
+        preferencesGeneration = -1; restoringPreferences = false; restorationSeen = false
+      }
       if ((logoutRequested || websiteHadSession) && websiteNavigation.status === 'sign-in') { logoutRequested=false;websiteHadSession=false;websiteSignedOut=true;mode.select('harness') }
       if (websiteNavigation.status === 'ready') { websiteHadSession=true;websiteSignedOut=false }
       restorePreferences()
@@ -275,8 +281,9 @@ export function apply(ctx: Context): void {
   }
   function restorePreferences(): void {
     if (!preferences || !navigationHandler || websiteNavigation.status!=='ready' || preferencesGeneration===authorizationGeneration) return
-    preferencesGeneration=authorizationGeneration;restoringPreferences=!!preferences.language;restorationSeen=false
-    void navigationHandler({type:'preferences',...preferences})
+    const language = preferences.language || DEFAULT_WEBSITE_LANGUAGE
+    preferencesGeneration=authorizationGeneration;restoringPreferences=true;restorationSeen=false
+    void navigationHandler({type:'preferences',language})
   }
   function persistPreference(key:'language', value:string): void {
     if (!preferenceForm || !preferences || preferences[key]===value || pendingPreferences.get(key)===value) return

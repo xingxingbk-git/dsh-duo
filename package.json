@@ -1,6 +1,6 @@
 {
   "name": "dsh-chat",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "private": true,
   "description": "CHAT / HARNESS mode switcher for DeepSeek Harness",
   "type": "module",

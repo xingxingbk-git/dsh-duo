@@ -30,7 +30,7 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
   const marker = 'data-dsh-chat-navigation'
   const styleId = 'dsh-chat-website-navigation-style'
   const preparingStyleId = 'dsh-chat-website-preparing-style'
-  const owned = [marker, 'data-dsh-chat-layout', 'data-dsh-chat-content', 'data-dsh-chat-web-chrome', 'data-dsh-chat-profile', 'data-dsh-chat-settings-dialog', 'data-dsh-chat-settings-host', 'data-dsh-chat-expanding', 'data-dsh-chat-settings-tabs', 'data-dsh-chat-settings-pane', 'data-dsh-chat-settings-layout', 'data-dsh-chat-settings-chrome', 'data-dsh-chat-settings-appearance', 'data-dsh-chat-header-row', 'data-dsh-chat-header-title', 'data-dsh-chat-header-share']
+  const owned = [marker, 'data-dsh-chat-layout', 'data-dsh-chat-content', 'data-dsh-chat-web-chrome', 'data-dsh-chat-profile', 'data-dsh-chat-settings-dialog', 'data-dsh-chat-settings-host', 'data-dsh-chat-settings-tabs', 'data-dsh-chat-settings-pane', 'data-dsh-chat-settings-layout', 'data-dsh-chat-settings-chrome', 'data-dsh-chat-settings-appearance', 'data-dsh-chat-expanding', 'data-dsh-chat-header-row', 'data-dsh-chat-header-title', 'data-dsh-chat-header-share', 'data-dsh-chat-header-title-host', 'data-dsh-chat-header-editor']
   const empty = (status: WebsiteNavigation['status']): WebsiteNavigation => ({ status, conversations: [], selectedHref: null, canCreate: false, error: null })
   const clearSettings = () => {
     for (const attr of [...doc.documentElement.attributes]) if (/^data-dsh-chat-(settings-|language$|theme$|dark-complete$)/.test(attr.name)) doc.documentElement.removeAttribute(attr.name)
@@ -66,7 +66,9 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
         adaptWebsiteNavigation(doc, doc.defaultView!.location, { type: 'snapshot', showOriginal: false })
       })
     })
-    observer.observe(doc.body, {childList:true,subtree:true,characterData:true})
+    // Observe site edit-mode switches, but exclude our data/style attributes
+    // so setting layout markers cannot recursively trigger the adapter.
+    observer.observe(doc.body, {childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','type','contenteditable','role']})
     doc.addEventListener('dsh-chat-stop-adapting', () => {
       observer.disconnect(); doc.documentElement.removeAttribute('data-dsh-chat-observing')
     }, {once:true})

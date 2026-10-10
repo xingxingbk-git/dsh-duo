@@ -137,3 +137,10 @@ Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可�
 - 原生Modal层级以@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2发布包Modal.module.css确认1000，react-dom是官方共享模块。网页实际设置的四类、账号公开资料、Voice、训练开关、共享/导出/删除和条款/隐私入口均通过现有登录态只读观察；没有执行账号解绑/删除、数据导出/删除、隐私修改或发送消息。新版完整操作仍待验收。
 
 - W019最新范围已取消四Tab/Voice。上述官网完整设置观察仅是历史证据；当前只实现账号昵称、当前会话退出和语言。实机定位器回归已对照仓库HEAD旧版适配，官网语言读取与配置落盘分别核查；所有结论以handoff最新分层为准。
+
+
+## W021持久会话再次核查（2026-10-10）
+
+- [最新固定官方Browser限制](https://github.com/deepseek-ai/deepseek-harness/blob/d743267388641bc76f17c45ce8b4c231aed1d32c/packages/client/ui-sidebar-browser/README.md#known-limitations-and-deferred-work)：Cookie与网页存储不跨应用重启。GitHub网页抓取Cache miss；只读代理通过原始公开源码及GitHub API核对固定SHA，未将失败网页抓取写成成功。
+- [同SHA browser-guests.ts](https://github.com/deepseek-ai/deepseek-harness/blob/d743267388641bc76f17c45ce8b4c231aed1d32c/apps/desktop/src/browser-guests.ts)：随机内存partition与强制lease匹配。本机DSH0.2.0-rc.2发布产物主进程同实现；稳定workspace键只保证进程内隔离/复用。
+- Playwright独立浏览器可以打开官网公开登录页面；未输入凭据或登录，不能据此判断官网已登录聊天顶栏。布局适配依据用户截图和现有公开标题/分享节点；当前DSH查看结果见handoff。

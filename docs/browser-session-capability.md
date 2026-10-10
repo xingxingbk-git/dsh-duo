@@ -4,6 +4,8 @@
 
 ## 已确认阻碍
 
+2026-10-10再次核查：本机DSH0.2.0-rc.2发布产物仍使用下述内存分区。官方最新0.2.1-alpha.2/固定master d743267388641bc76f17c45ce8b4c231aed1d32c也明确Cookie和网页存储不会跨应用重启；升级到该版本不能解决。见[官方Browser限制](https://github.com/deepseek-ai/deepseek-harness/blob/d743267388641bc76f17c45ce8b4c231aed1d32c/packages/client/ui-sidebar-browser/README.md#known-limitations-and-deferred-work)。本轮0.1.6仅恢复语言偏好，没有实现认证持久化。
+
 目标DSH 0.2.0-rc.2公开DesktopBrowserBridge仅提供acquire(workspace)、release(lease)、onOpenRequested。browser-guests主进程随机生成无persist前缀的隔离partition，并在will-attach时强制检查；当前master也未公开持久会话选项。官网认证状态属于Electron主进程Session，插件Host子进程和ConfigForms无法改变其存储生命周期。临时内存偏好缓存、页面localStorage或DSH平台账号登录都不能代替Chat登录Session。
 
 ## 建议契约
