@@ -64,6 +64,8 @@
 
 ## 后续必须补齐的官方证据
 
+2026-10-10 安装问题复核：[官方打包文档的 GitHub 构建脚本说明](https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish#installing-from-github-the-build-script-catch) 明确指出 Git 只取得源码，作者必须提供自包含 prepare，用户需为 pnpm 授予该包的构建许可；预构建 tarball 不需要此许可。本机 Desktop profile 的实际安装缺少 Host/Client lib 入口，不能以先前 tarball 验证推断 Git 安装可用。
+
 1. 在目标设备先 Inspect `list`，获取准确的账号授权 Provider/Method，再确认读取状态、订阅登出/授权失效、账号切换和取消请求的契约。不读取原始密码/Cookie/token。
 2. 确认所有进入 CHAT 的入口及新建/快捷键路径如何统一受授权门槛约束。
 3. 用真实 DSH 加载插件，验证 panel 切换、原侧栏恢复、右栏恢复和插件禁用/卸载。

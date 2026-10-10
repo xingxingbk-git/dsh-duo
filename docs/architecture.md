@@ -58,6 +58,8 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 锁定 Cordis 4.0.4、官方 DSH 包 0.2.0-rc.2、React 18.3.1；TSX 支持，Host ESM、Client 单个 lazy-CJS factory、lib/types 声明。Client 仅共享固定 baseline 模块，第三方 Zod inline；feature 服务只通过 ctx/注入使用。build/check-artifact 校验精确 module requests、Host 依赖声明和单工厂结构，tarball 不含源码开发 harness、依赖或凭据。
 
+Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git 安装通过 `prepare` 运行本包自包含构建脚本；它依赖本包已声明的开发依赖，不需要旁边的 DSH monorepo 或临时提取文件。pnpm 的构建许可必须显式授予 dsh-duo，不能把 `--ignore-scripts` 用于源码 Git 安装；预构建 tarball 无需安装时构建。DSH bundled pnpm 11.7.0 必须在 profile 的 allowBuilds 批准准确 Git 身份，单独 `--allow-build=dsh-duo` 会失败。2026-10-10 实际 Git 安装曾因没有 prepare 而缺失两个 lib 入口，先前 tarball 检查没有覆盖这一问题，修复与复验见 handoff/worklog。
+
 浏览器 Web profile 缺少 Desktop bridge 时保持 Harness 禁用，无未经验证的 iframe 回退。官网公开无凭据 HEAD 返回 429，不能据此断定 iframe 嵌入策略。
 
 ## 尚未成立的能力

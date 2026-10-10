@@ -10,6 +10,8 @@
 
 实现锁定依赖、TSX、Host/browser 打包及 tarball；账号门槛、授权代次栅栏、模式控制、原 panel 恢复与 Core 单元测试。具体已执行结果以 handoff 为准。真实 DSH 与网站登录联动仍不以单测代替。
 
+2026-10-10 修复源码 Git 安装缺少 prepare 的交付问题；普通 pnpm 10 与 DSH bundled pnpm 11 的固定提交构建许可分别复验，保留 tarball 安装路径。真实 Desktop 已确认插件启用及控件显示，这不等于网站验收。
+
 ## 阶段 2：真实网页容器候选版
 
 通过 Desktop Browser lease 创建安全 webview；main 占位自然隐藏右栏，persistent shell.overlay 保留网站文档。仅测自己的占位矩形，手动模式切换不销毁网页。可访问入口采用用户同意的临时控件，保留原快捷键限制说明。

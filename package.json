@@ -26,11 +26,13 @@
     "README.md"
   ],
   "scripts": {
+    "prepare": "node ./scripts/build.mjs",
     "build": "node ./scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node ./scripts/test.mjs",
     "preview": "node ./scripts/preview.mjs",
     "check:artifact": "node ./scripts/check-artifact.mjs",
+    "check:git-install": "node ./scripts/check-git-install.mjs",
     "package:plugin": "pnpm run build && pnpm pack --pack-destination ./artifacts"
   },
   "dsh": {

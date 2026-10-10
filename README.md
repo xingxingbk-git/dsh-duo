@@ -36,6 +36,20 @@ dsh plugin --profile desktop add /absolute/path/dsh-duo-0.1.0.tgz --ignore-scrip
 dsh plugin --profile desktop remove dsh-duo
 ```
 
+### 从 GitHub 地址安装
+
+仓库只保存源码；Git 安装必须允许插件的 `prepare` 构建，才能生成 `lib/index.js` 与 `lib/client.js`。仅下载源码或使用 `--ignore-scripts` 安装 Git 依赖会缺少入口，启用时显示 `failed to import`。
+
+使用固定提交安装：
+
+```bash
+dsh plugin --profile desktop add "github:xingxingbk-git/dsh-duo#<完整提交哈希>"
+```
+
+将占位哈希替换为实际提交。DSH 0.2.0-rc.2 内置 pnpm 11：首次执行会提示 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，按它打印的准确 Git 包标识在 `$DSH_HOME/profiles/desktop/pnpm-workspace.yaml` 中增加 `allowBuilds`，再重试。保留已有配置，只允许本次指定提交，不要全局允许所有依赖脚本。普通 pnpm 10 的 CLI 可用 `--allow-build=dsh-duo`，该参数不能替代 pnpm 11 的 Git 身份许可。
+
+构建执行本仓库的脚本；不希望在安装时构建可使用上面的预构建 `.tgz`。
+
 完整安装规则参见 [DSH 官方插件安装文档](https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish)。候选版在独立 Web profile 可检查打包和 Host 加载；Web profile 没有 Desktop Browser 桥，CHAT 会明确保持禁用。
 
 ## 当前限制

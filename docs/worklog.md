@@ -95,3 +95,13 @@
 - 失败尝试与修复：Playwright首次因沙箱DNS失败，授权工具网络后CLI可用；折叠模拟最初超时，核对官方AppFrame固定grid列后发现preview缺owner约束，仅补开发wrapper并重测通过，生产无改动。官方Client直接Node ESM导入因window不存在失败，改按正式lazyCJS契约测。pnpm同路径同版本tgz --force仍报Already up to date且装着旧骨架，改唯一hash路径并核对hash才计成功；remove不接受--ignore-scripts，专用profile改--config.ignore-scripts=true完成。
 - 限制与交接：没有真实Desktop官网登录、消息、验证码/上传、两端历史、原生Session/右栏和Desktop禁用/卸载证据。DSH登录与网页登录独立，内部网页退出不可观察；草稿提取/网页生成取消和原生历史重绘缺公开能力。下一步由用户本人完成网页登录并用非敏感对话验收。此阶段源码、任务与上下文仅本地保存，未提交/未推送，不声称跨设备已同步。
 - 结束检查：再次fetch成功，HEAD与origin/main仍0 ahead/0 behind；Markdown本地链接、package JSON和差异格式检查通过。模拟浏览器/preview及隔离Host服务均已关闭，未停止用户DSH。安装说明已在Codex面板打开。
+
+## W011 · 2026-10-10 · T05/T12/T13 · Git 安装导入失败修复
+
+- 触发：用户从 GitHub 仓库 URL 安装，DSH 0.2.0-rc.2 启用提示 dsh-duo failed to import。main基线e1a19e2，开工工作区干净，fetch后0 ahead/0 behind；单Agent负责构建/安装和上下文，无并行文件所有者。
+- 根因证据：本机desktop profile依赖为github:xingxingbk-git/dsh-duo；实际安装lib/index.js和lib/client.js都不存在。仓库不提交lib，package缺prepare。官方打包文档明确描述这种Git源码安装失败；上一阶段只验证tarball，未覆盖Git路径。e1a19e2已推送，W010当时“仅本地”不是当前同步状态。
+- 修复：package增加自包含prepare和check:git-install；独立临时Git源码fixture排除lib/依赖/用户数据，验证实际包管理器安装、Host import和Client注册；README区分Git构建许可与预构建tarball，验收/架构/路线/资料/AGENTS与handoff同步；依赖缓存排除，未改聊天源码或账号策略。
+- 环境：当前Mac DSH 0.2.0-rc.2（Info.plist/CLI），Node v24.15.0，项目pnpm10.33.2，DSH bundled pnpm11.7.0；开发依赖Cordis4.0.4/React18.3.1；无live Inspect，不读取密码/Cookie/token或会话内容。
+- 验证：冻结安装、typecheck、19/19测试、构建/pack及artifact契约通过。pnpm10的Git安装通过；pnpm11仅--allow-build首次失败，按其打印的准确Git身份配置fixture allowBuilds后通过。把Git身份许可直接套到pnpm10会报INVALID_VERSION_UNION，检查脚本已按实际包管理器主版本分开配置两种许可。没有全局放开依赖脚本，也未改变用户profile的脚本许可。
+- 当前设备修复：官方CLI在desktop profile用hash命名tarball替换损坏的dsh-duo依赖（--ignore-scripts），两个安装入口hash匹配构建；原UI关闭/重新启用插件后，AX/截图显示“运行中”和两个模式控件。界面处于授权pending，未进入官网或发送消息；启用成功不代表聊天、授权或网页历史已验收。
+- 交付/下一步：依本会话既有授权提交推送代码和上下文，远端状态以实际Git核对为准；安装包和构建产物不提交。下一步由用户完成正常授权/网页登录，真实官网、右栏/Session与卸载恢复仍需验证。测试fixture自动清理，没有驻留新增服务。
