@@ -1,61 +1,72 @@
 # 当前状态与开发接力
 
-更新日期：2026-10-10（Asia/Shanghai）。W016 / 0.1.2本地实现、构建与分层检查已完成，交还用户验收；无进行中Agent负责人。需求以requirements、技术依据以architecture/references、历史以worklog为准。
+更新日期：2026-10-10（Asia/Shanghai）。W017 / 0.1.3候选修复完成，单Agent Codex/macOS工作已交还用户验收，无进行中分工。用户登录截图推翻W016不足的验收结论，历史失败保留worklog，当前需求以requirements、技术证据以architecture/references为准。
 
 ## 总目标与当前路线
 
-为DSH提供可逆CHAT/HARNESS切换：CHAT使用真实官网聊天与服务器历史，HARNESS恢复原工作区。共用原SidebarRoot，只在CHAT替换sidebar.workspaces；导航镜像由用户批准的有限官网DOM适配实现，不能用模型API或本地记录冒充官网历史。
+可逆CHAT/HARNESS切换：CHAT使用真实官网聊天/服务器历史，HARNESS恢复原工作区。共用原SidebarRoot和背景材质，只在CHAT替换sidebar.workspaces；网页导航镜像属于用户批准的有限公开UI适配，不能称为官方历史API或独立同步。
 
-W016按最新截图将切换器靠右并自动填充品牌间距；CHAT隐藏原插件行、顶部新会话转交官网；删除常驻网页刷新/官网导航按钮和插件底部提示，保留故障重试及折叠后的展开/模式入口。DSH侧栏适配是用户明确批准的有限例外，不是官方新建API，也不扩大为任意核心DOM修改。DSH与网页登录仍独立，未发现Chat SSO桥。
+W017修复官网重复导航轨道/紧凑头部，加载和登录SPA先遮罩，布局适配并确认暗色后显示；删除整个插件工具栏。官方shell.leading承担CHAT折叠后的展开/官网新建，切回HARNESS撤回恢复原控件。官方settings.section新增“CHAT设置”：显示真实网页可见账号、系统语言、官网完整设置/导航与重载。用户最后明确取消外观选项，CHAT固定暗色。没有重做侧栏或修改DSH安装包/核心状态。
 
-## 基线、分工与交付
+## 基线、范围与交付规则
 
-- W016归T03/T06/T08/T13，单Agent/Codex/macOS。目标/完成标准为上述截图行为逐项验证，区分模拟、实机及受限项；范围src/sidebar-adapter、client/ui/styles/web-surface、preview及受影响文档。未新增依赖或修改Host账号策略、DSH安装包、其它插件、核心状态或凭据。
-- 开工main干净，fetch成功，HEAD/origin/main为f3ab5c75ae6580583e5dfd3ca283222269235c85，0/0。W014/W015已经由用户手动提交同步；worklog保留它们当时尚未提交的历史记录，不能当作当前状态。
-- package.json从0.1.1递增到0.1.2一次。本轮修正/重打包仍为0.1.2；下一轮独立修复为0.1.3，跨设备先fetch核对。版本规则以AGENTS为准。
-- 用户先验收、自行通过Codex右上角stage/commit/push；Agent未执行任何提交/推送/tag。本轮代码与上下文仅本地，未跨设备同步。代码和文档需一起由用户提交，另一设备拉取后才获得新上下文。
-- 本轮实读DSH0.2.0-rc.2、Node24.15.0、项目pnpm10.33.2；官方CLI内置pnpm11.7.0，依赖Cordis4.0.4/React18.3.1。无live Cordis Inspect，官方契约以固定commit639ed015397290b3745d163aafe02ffee4aa3f84及对应发布类型核查，不冒称live查询。
+- 开工main干净，fetch成功，HEAD=origin/main=b0b8e4b，0/0；W016已由用户手动提交。版本0.1.2→0.1.3已递增一次，本轮调试/重打包不重复递增；下一轮独立修复0.1.4。
+- W017归T02/T03/T05/T06/T08/T09/T12/T13，单Agent/Codex/macOS。范围src/client/ui/styles/web-surface/website-navigation、preview/scripts/相关测试、package与lock及当前文档；Host授权策略与W016有限原侧栏适配边界保持原实现。
+- 用户此轮直接要求网页账号/设置，授权范围记录在AGENTS：仅可见账号/公开设置UI、系统语言/固定暗色，不读正文、凭据、Cookie、token、storage、私有应用状态/API，不模拟登录。原DSH有限侧栏例外不扩展。
+- 目标DSH0.2.0-rc.2 / Cordis4.0.4 / React18.3.1；本机Node24.15.0、项目pnpm10.33.2，官方CLI内置pnpm11.7.0（CLI Node24.18.1）。无live Inspect，固定官方commit639ed015397290b3745d163aafe02ffee4aa3f84及发布类型用于契约核查，实机UI用于行为确认。
+- 新增ui-settings@0.2.0-rc.2开发类型及client manifest依赖，运行时依旧单lazy工厂/3个公开共享baseline，无第二份React/Cordis；详细来源见references。
+- 不stage/commit/tag/push。代码与所有上下文文档仅本地，用户验收后自行Git；另一设备拉取用户提交后才获得新上下文，不宣称自动跨设备同步。
 
 ## 全部任务当前快照
 
 | ID | 目标 | 当前成果/证据 | 下一步/限制 |
 |---|---|---|---|
-| T01 | Host/Client、manifest、patch | 安全账号桥、Client真实网页容器已实现 | 完整官网验收见T10/T11 |
-| T02 | 官方能力与版本 | 固定源码、发布类型和本机版本核对 | 新设备重新核对；仍无live Inspect |
-| T03 | 需求/授权/数据源 | 官网路线、两个有限DOM例外、手动Git和patch+1同步 | 用户需求以requirements/AGENTS为准 |
-| T04 | 官方授权/通知 | namespace修复、35秒期限、getState/getProfile/watch及代次栅栏 | 实际DSH退出/换账号待验收；无Chat SSO/官方退出通知桥 |
-| T05 | 依赖/构建/安装 | 0.1.2 typecheck、27项回归、打包及安装hash匹配通过 | Git源码安装沿用已验证prepare路径；新远程代码尚未推送 |
-| T06 | 品牌/新建 | 靠右控件实机可见；顶部click转交官网，鼠标/Enter模拟通过 | 已登录官网顶部新建待用户验收；菜单/快捷键仍Harness；其它平台未测 |
-| T07 | 门槛/可逆/回退 | 模拟含超时/迟到/退出隔离；实机往返及首次授权保持Harness | 真实账号退出/失效回退待验收 |
-| T08 | CHAT主区/导航 | W015官网分组/选择/＋新建实测；W016插件行/工具条/提示清理实测 | 空账号/分页、全部官网管理动作及布局变化扩测 |
-| T09 | 保活/原面板/撤回 | W015草稿往返保活；W016原会话/关闭右栏返回，折叠可达 | 完整右栏矩阵/Chat中卸载待测；授权变化时草稿仍有限制 |
-| T10 | 官网聊天 | 官网可加载；本轮实机为登录视图，未输入凭据或发送消息 | 首次登录/验证码/发送/流式待用户验收 |
-| T11 | 官网历史 | W015真实列表已显示，不复制/合并本地历史 | 另一浏览器同账号、新会话跨端同步待验收 |
-| T12 | 禁用/兼容 | 最终包本机启用；Harness中禁用恢复原徽标、重启用恢复通过 | 完整卸载/Chat禁用及Windows/Linux未验收 |
-| T13 | 上下文/Git接力 | 当前目标/实现/失败/证据/限制均已本地同步，阶段负责人已交还用户 | 用户验收和手动Git；不宣称本轮已跨设备同步 |
+| T01 | Host/Client/manifest | 安全账号桥、真实网页容器、原生设置/导航已实现 | 全部官网能力不以骨架/构建代替验收 |
+| T02 | 官方契约/版本 | 固定源码/发布类型核查；W017补settings.section和shell.leading | 新设备核对版本；无live Inspect |
+| T03 | 需求/授权/数据源 | 官网路线、有限UI适配、固定暗色、手动Git及patch+1同步 | 按requirements/AGENTS继续 |
+| T04 | 授权/账号 | namespace、35秒期限、官方状态/watch/代次栅栏已实现 | DSH实际退出/换账号、Chat SSO/身份桥待验收或未公开 |
+| T05 | 构建/安装 | 0.1.3类型构建、28项回归、16文件打包及本机安装hash匹配通过 | 本轮未推送，不能远程安装新提交 |
+| T06 | 品牌/新建/折叠 | 原侧栏视觉保留；实机已有对话→折叠新建回空Chat，展开正常 | 菜单/快捷键仍Harness；其他平台未测 |
+| T07 | 门槛/回退 | 单元模拟超时/迟到/退出隔离，所有自有入口同门槛 | 实际官方授权退出矩阵待验收 |
+| T08 | 官网主区/导航/设置 | 外层导航占位/紧凑头部清理；原生CHAT设置真实账号/中文、固定深色、官网完整设置实测 | 首次登录完整流程/分页/全部官网管理动作扩测 |
+| T09 | 保活/恢复 | 手动往返同一原Harness面板；刷新后中文保留；guest按代次释放 | 完整右栏/卸载矩阵、网站在途流仍有限制 |
+| T10 | 官网聊天 | 官网已登录主页及既有导航可加载，本轮无消息发送 | 首次登录/验证码/发送/流式待用户验收 |
+| T11 | 官网历史 | 网站服务器列表界面镜像，不保存另一份历史 | 另一浏览器同账号/新会话跨端一致性待验收 |
+| T12 | 禁用/兼容 | 本轮Harness中禁用恢复原徽标/导航，重启用有效且保持Harness；最终更新回Harness通过 | Chat直接禁用/完整卸载矩阵及其他平台仍未验收 |
+| T13 | 上下文接力 | 用户决策、官方依据、实现、失败及分层证据已同步本地 | 收尾后交还用户，无自动Git或全球记忆 |
 
-## W016实现与失败记录
+## W017实现与失败理由
 
-- 品牌装饰与锚点仍由官方sidebar.brand.name提供，交互层位于shell.overlay，避开aria-hidden/外层button。限定sidebar-adapter从自有品牌元素识别官方SlotOutlet包装及原侧栏结构，标记品牌flex、插件行/空导航及新会话按钮；click捕获先阻止Harness回调，再调用统一官网门槛。网页登录页/未就绪时新建禁用，Harness恢复原按钮状态，禁用撤回属性和监听器。
-- 绑定归Client生命周期，品牌因折叠卸载时仍保留，展开重新绑定；只观察已定位sidebar root的childList，不读私有状态或全局凭据。不匹配时留原行为并在自有交互层提示，不能静默宣称顶部语义完成。
-- 首次模拟遗漏renderer的data-slot/display:contents包装，实机安全退出并提示不兼容；已修正准确包装定位及fixture。首次6702d7a11fc6和中间2cae9acb7dce包均被下方最终包取代，接力不能选旧hash，也不为同轮重测再涨号。
-- W012 namespace/授权错误收敛仍保留，未把传输故障判作登出。顶部菜单/系统快捷键仍由Harness管理，不在此次DOM例外内。
+- 官方settings.section根list的owner只有close，id/order/label形成原设置导航；插件只贡献自己的页面。官方shell.leading由AppFrame管理Mac全折叠位置；保活overlay原先覆盖该控件，现扣除公开frame-top-clearance，使用同一公开图标/Tooltip和28px/8px几何。
+- 导航隐藏上溯有宽度的窄列轨道，并将编辑器所在兄弟列填满。紧凑官网顶部仅识别无文本、2–3个图标按钮的小区域。结构不匹配撤回全部自有样式/标记、清空镜像、显示原官网；不是裁切视口。
+- 首次guest加载/路由变化在host遮罩；官网DOM观察器在React提交后的微任务检查，局部preparing样式在登录SPA显示新的导航前遮住body，完成适配/深色后撤回。首次完整重新登录未实测，不能用观察器设计或静态截图宣称逐帧验收完成。
+- 设置通过头像公开菜单→系统设置→通用设置操作。已隐藏头像几何为零，须在已确认导航内限定头像兜底；官网ds-button/ds-select自定义元素不能按原生button处理，语言通过实际文本触发器pointerdown/mousedown展开。
+- 中文菜单为“系统设置”；“通用设置”也含“设置”，曾使对话框定位过早命中内层。现同时校验空图标关闭控件，定位完整设置弹窗。临时结构诊断已移除；12秒期限失败提供原官网设置入口，不展示内部CSS类名。
+- 设置缓存只用自有DOM临时属性，sign_in/恢复清空；Guest返回账号/设置字段限长，Host/Client代次栅栏拒绝旧结果。普通网络故障不当作DSH退出。
+- 设置页仅系统语言，无外观选项；首次适配通过官网UI确认深色。官网完整设置仍可用，全部官网管理动作不称为原生镜像；不调用私有接口。
 
-## 本轮验证与最终产物
+## 本轮验证（最终收尾结果见下）
 
-- pnpm typecheck通过；pnpm test为27/27。覆盖生产Client真实Cordis/Gateway Context、授权/迟到/模式/导航边界；新增侧栏行为另在真实浏览器DOM fixture验证，不把27项当作DSH GUI结果。
-- pnpm preview使用生产UI、ModeController、sidebar-adapter和官网DOM适配函数，CSP禁止官网联网。验证原顶部鼠标/Enter只触发官网新建一次且无Harness新建，切回原点击恢复、插件行恢复；品牌间距填充、官网登录视图禁用新建、折叠仍隐藏插件行/可展开、退出回Harness/释放guest通过。已读取模拟浏览器warn/error为空；官网账号/layout/guest仍fixture。
-- 本机最终包：品牌右边缘对齐侧栏留白，原材质/真实账号区持续保留；CHAT插件行隐藏、主区常驻工具按钮/底部提示消失；官网sign_in时原顶部和＋均禁用。往返恢复同一原Harness会话及关闭右栏；折叠备用展开正常；Harness中禁用原HARNESS徽标恢复，重启用授权收敛且保持Harness。顶部已登录官网新建尚未实测，不能用模拟代替。
-- 最终包artifacts/dsh-duo-0.1.2-373eab046e75.tgz，SHA256 373eab046e7518c4ff8ead34944d3b9c54cbfc80fe099e7490ec9ee3b59d68fb；通用0.1.2.tgz内容相同。16个白名单文件，单lazy-CJS工厂、3个共享baseline，无额外React/Cordis实例。README与包内版本/文本已核对。
-- 官方CLI预构建--ignore-scripts更新desktop；实读安装版本0.1.2，Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54，Client hash 2e39529e8fece89140ef4efa053bd4c3f49bea7b1c2be0cf6efab418628b3604均匹配build。CLI原profile泛化peer warning保留，未阻止加载；不报告无警告安装。
-- 实机验收图output/playwright/dsh-duo-0.1.2-chat.png仅本地且Git排除；仓库不存个人导航标题/链接/正文/凭据。最终DSH保留CHAT官网登录视图，未填写账号/验证码、未登录或发送消息，没有验收草稿。当前截图不证明已登录新建。
+- node scripts/build.mjs：生产类型检查和artifact契约通过；node scripts/test.mjs：28/28，含新增账号/设置返回值限长及非ready清空、既有授权/代次/卸载/模式回归。补原官网导航恢复后原生设置重新接管的请求栅栏，避免下一次snapshot取消多步设置；单元与最终浏览器fixture均通过。
+- preview生产组件/ModeController/两个适配函数使用隔离DOM fixture，CSP禁止官网联网；新增自定义ds-button/ds-select与pointerdown语言下拉，不再仅测简化HTMLbutton。已确认轨道隐藏/内容填满/紧凑头部隐藏、中文真实fixture值/固定Dark、设置弹窗关闭、sign_in清空账号/设置且新建禁用。观察器首次登录逐帧与原生guest仍不是fixture证据。
+- 实机已有官网登录状态：真实账号资料可读，原生设置中文写回，官网分组/编辑器随语言变化；官网完整设置显示深色选中。插件工具栏整行移除、重复导航/占位与紧凑头部清理，折叠窗口展开/新建可用，从旧对话新建回空主页；HARNESS恢复原插件主面板，回CHAT复用网页；重新加载后仍中文，未输入凭据/验证码、未发送消息。
+- 多次候选hash仅用于定位问题，最终包下方记录为唯一交接依据；同轮不重复涨号。pnpm pack执行反馈不足后使用临时npm cache的npm pack --ignore-scripts（此前已显式成功build），未修改系统缓存权限。官方CLI泛化peer warning仍保留，不报告零警告安装。
+- 个人导航截图仅本地Git排除；仓库不包含个人标题/链接/正文、凭据、安装包、依赖或构建产物。
 
-## 限制与可执行下一步
+## 限制与下一步
 
-1. 用户在官网正常完成登录后验收顶部新会话是否清空到官网空对话、不改变Harness会话，再检查发送/另一浏览器同账号历史；不要读取/迁移Cookie或抓私有API。
-2. DSH Platform/API授权和Chat网页登录独立；官方Browser分区仅存续当前进程。没有查到Chat SSO桥，不能保证自动共用登录、同账号匹配或官网退出立即回Harness。官网登录视图检测不是DSH授权失效证据。
-3. 菜单/快捷键新建、全部网页管理动作、空账号/分页、DSH真实退出/换账号、完整右栏/卸载矩阵及其它平台继续保留待验收状态。
-4. 卸载/授权代次变化释放guest，无法提取网页未发送草稿或调用私有停止生成；下载/设备权限/外部OAuth受官方Browser策略限制。Web缺桥禁用，无未经验证iframe回退。
-5. 本轮无待决定的设计事项；接力先读AGENTS、需求/架构与此快照，再fetch核对用户是否已经提交。本阶段不再涨号；下一轮独立修复0.1.3。
+1. 用户先验收当前界面和原生CHAT设置，再手动提交/推送源码及上下文；新设备fetch核对实际版本，不依赖本机缓存或聊天摘要。
+2. 首次官网登录完整流程/逐帧闪现、发送/流式、跨浏览器同账号历史、空账号/分页、实际DSH退出/换账号、完整卸载/右栏矩阵与Windows/Linux尚未验收。
+3. DSH Platform/API授权与Chat网页登录独立；没有确认SSO/同账号匹配/网页退出通知桥。网页登录页检测不证明DSH授权失效，不能迁移Cookie或抓私有API。
+4. 原菜单/快捷键新建仍执行Harness语义；网站内部账号/数据管理仅通过官网完整设置可达。原生Browser仅进程内分区，重启需重新网页登录。
+5. 授权变化/卸载释放guest，无法提取网页未发送草稿或调用私有停止生成；下载/设备权限/外部OAuth由官方Browser安全策略管理。Web缺桥禁用，无未经验证iframe回退。
+6. 无待决定的设计事项；当前阶段结束后负责人交还用户。同轮仍0.1.3，下轮独立修复0.1.4。历史W010–W017见worklog，README只描述产品。
 
-历史构建、Git安装、授权修复、品牌裁剪、官网列表和决策变化见worklog W010–W016。README只介绍产品使用与限制，不承担Agent上下文同步。
+## 最终收尾记录
+
+- 最终包artifacts/dsh-duo-0.1.3-1bec00d16d90.tgz，SHA256 1bec00d16d90559811889a2ccd9798807b3d0191db36d58f0c82853d5c45c738；通用0.1.3.tgz内容一致。16个白名单文件，版本/README匹配；单lazy工厂/3共享baseline。此前所有0.1.3候选包（包括30f7c02661f3）已被此包替代，不能选旧hash交接。
+- 官方CLI更新desktop --ignore-scripts成功；实际版本0.1.3，Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54，Client hash 4ead262e29b350e2ebe5ccff205fd07f36254040e3abf52084c49030396de35b，逐项与build匹配。CLI泛化peer warning不影响本次加载，仍记录。
+- 最终源码fixture初始System/opacity0→实际Dark/opacity1，导航轨道隐藏、内容扩展、紧凑头部隐藏且官网设置对话框关闭；恢复原导航可见后再次进原生设置正常读回，无卡住。浏览器warnings/errors为0；真实guest首帧/首次重新登录不能由此替代。
+- 本轮原插件页禁用恢复原HARNESS徽标、新建/插件导航；重启用授权收敛并保持Harness。最后更新再次从Harness开始，进入CHAT实际账号/简体中文值显示、无外观选项、固定暗色及主区无重复导航/占位已截图确认；最终保留CHAT中文空主页，无测试草稿或消息。
+- 本地验收截图output/playwright/dsh-duo-0.1.3-settings.png与dsh-duo-0.1.3-chat.png仅本机且Git排除，未写入仓库；本轮创建的模拟浏览器页与preview进程已关闭，用户页面/DSH继续保留。
+- 结束fetch成功，main/HEAD/origin仍b0b8e4b且0/0；git diff --check及8份Markdown链接/围栏检查通过，21份源码/测试/文档未暂存，暂存区空。包/截图均Git排除；本轮未stage/commit/tag/push，不宣称跨设备同步。下一Agent先fetch核对用户手动提交，不为同轮补涨版本。

@@ -32,7 +32,7 @@ try {
         })
         plugin.onLoad({ filter: /.*/, namespace: 'client-di-fixture' }, args => ({
           contents: args.path === './ui.js'
-            ? 'export const DuoBrandName = () => null; export const DuoBrandControl = () => null; export const DuoChatNavigation = () => null; export const DuoChatPanel = () => null;'
+            ? 'export const DuoBrandName = () => null; export const DuoBrandControl = () => null; export const DuoChatNavigation = () => null; export const DuoChatPanel = () => null; export const DuoLeadingControls = () => null; export const DuoChatSettings = () => null;'
             : 'export const DuoWebSurface = () => null;',
           loader: 'js',
         }))

@@ -148,7 +148,7 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
   }
 }
 
-test('Chat swaps only the middle slot and disposes it without replacing native sidebar controls', async () => {
+test('Chat swaps navigation and collapsed chrome, then restores both native seats', async () => {
   const h = harness()
   try {
     await h.ready()
@@ -157,10 +157,11 @@ test('Chat swaps only the middle slot and disposes it without replacing native s
     h.requests[1].resolve({ok:true,value:authorized()}); await flush()
     assert(h.registrations().includes('sidebar.workspaces:'))
     assert(!h.registrations().includes('sidebar:'))
-    assert(!h.registrations().includes('shell.leading:'))
+    assert(h.registrations().includes('shell.leading:'))
     assert(!h.registrations().includes('sidebar.settings:'))
     h.bridge.selectMode('harness'); await flush()
     assert(!h.registrations().includes('sidebar.workspaces:'))
+    assert(!h.registrations().includes('shell.leading:'))
     assert(h.registrations().includes('sidebar.brand.name:'))
     assert.equal(h.panel(),'plugins')
   } finally { await h.dispose() }
@@ -182,11 +183,16 @@ test('website list and action binding are invalidated at account change and late
     assert.equal(called,0)
     h.bridge.commandWebsite({type:'open',href}); await flush()
     assert.equal(called,1)
+    h.bridge.toggleWebsiteNavigation()
+    assert.equal(h.bridge.getSnapshot().showWebsiteNavigation,true)
+    h.bridge.commandWebsite({type:'settings-read'}); await flush()
+    assert.equal(h.bridge.getSnapshot().showWebsiteNavigation,false)
+    assert.equal(called,2)
     h.emit(authorized('B','grant-b')); await flush()
     assert.equal(h.bridge.getSnapshot().websiteNavigation.conversations.length,0)
     h.bridge.reportWebsiteNavigation(generation,{status:'ready',conversations:[{href,title:'stale',group:'置顶'}]})
     h.bridge.commandWebsite({type:'new'}); await flush()
-    assert.equal(called,1)
+    assert.equal(called,2)
     assert.equal(h.bridge.getSnapshot().websiteNavigation.conversations.length,0)
   } finally { await h.dispose() }
 })

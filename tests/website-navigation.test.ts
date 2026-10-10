@@ -16,3 +16,18 @@ test('serialized DOM adapter does not reference module helpers or privileged dat
   assert.match(script,/\(document,location,/)
   assert.doesNotMatch(script,/fetch\(|XMLHttpRequest|localStorage|sessionStorage|document\.cookie|__webpack|emptyNavigation|parseWebsiteNavigation/)
 })
+
+// Guest data may be malformed or belong to the previous website login.
+test('account and preference responses are bounded and discarded outside a ready session', () => {
+  const payload={status:'ready',conversations:[],canCreate:true,accountName:'A'.repeat(200),settings:{language:'L'.repeat(160),theme:'Dark',error:'E'.repeat(400),pending:true}}
+  const ready=parseWebsiteNavigation(payload)
+  assert.equal(ready.accountName?.length,100)
+  assert.equal(ready.settings?.language?.length,80)
+  assert.equal(ready.settings?.error?.length,200)
+  for (const status of ['sign-in','loading','unsupported']) {
+    const cleared=parseWebsiteNavigation({...payload,status})
+    assert.equal(cleared.accountName,null)
+    assert.equal(cleared.settings,undefined)
+    assert.equal(cleared.canCreate,false)
+  }
+})

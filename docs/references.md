@@ -115,3 +115,11 @@ Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可�
 - [rc.2 DeepSeekAccount](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account/src/index.ts)及[Platform实现](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/credentials/deepseek-account-platform/src/index.ts)：默认Platform为platform.deepseek.com，inference为api.deepseek.com，Host-only PlatformSession不是Chat网页登录SSO。
 - [rc.2 Browser guests](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/apps/desktop/src/browser-guests.ts)：acquire生成不带persist前缀的进程内隔离partition，不共享系统浏览器或DSH账号会话。结合公开Account/Browser面，在本版本未发现Chat免登录桥；结论仅限已核查公开能力，不宣称服务方永远不支持。
 - 当前官方Slots文档成功浏览；web工具对两处raw URL返回Internal Error后，使用HTTPS下载固定公开源码核查，不读取本机凭据或改部署。截图/AX显示DSH已授权但官网处于sign_in；不将上轮曾登录状态写成当前状态。
+
+## W017原生设置与窗口布局核查（2026-10-10）
+
+- [官方Settings说明](https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/settings)、[添加设置卡片](https://deepseek-harness.github.io/deepseek-harness/en/reference/cookbook/adding-a-settings-card)及[Slots契约](https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/slots)：本轮已浏览，设置导航通过settings.section组成；具体owner以目标版本类型为准。
+- [固定ui-settings Slots](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-settings/src/contract/slots.ts)：settings.section根list，owner只有close，id/order/label形成原生设置导航。开发依赖/manifest按rc.2锁定，无live Inspect。
+- [固定AppFrame](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/AppFrame.tsx)及同目录AppFrame.module.css：Mac折叠shell.leading挂载与官方frame-top-clearance、窗口坐标/z层次。本插件扣除公开顶部留白，避免guest遮住窗口控件。
+- [固定HeaderLeadingControls](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/HeaderLeadingControls.tsx)及同目录样式：公开图标/Tooltip、28px按钮/8px间距。CHAT替换该Slot的动作语义，HARNESS撤回；不复制私有feature组件。
+- 官网实际公开界面显示ds-button/ds-select、中文“系统设置”及“通用设置”，本机公开UI确认语言简体中文/主题深色。只记结构和验证结果，不保存个人标题/正文/凭据。直接公共GET为429，不用于判断guest布局；所有实机结论来自DSH实际guest。

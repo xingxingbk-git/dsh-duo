@@ -173,3 +173,22 @@
 - 最终包artifacts/dsh-duo-0.1.2-373eab046e75.tgz，SHA256 373eab046e7518c4ff8ead34944d3b9c54cbfc80fe099e7490ec9ee3b59d68fb；16白名单文件、单lazy工厂/3共享baseline。官方CLI更新desktop，实际0.1.2、Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client hash 2e39529e8fece89140ef4efa053bd4c3f49bea7b1c2be0cf6efab418628b3604均匹配。中间2cae9acb7dce及首包均被最终包取代。CLI泛化peer warning仍记录，没有冒称零警告。
 - 本阶段完成并交还用户验收，无进行中负责人；main仍f3ab5c7，本轮源码/上下文仅本地，未stage/commit/tag/push。临时preview服务/浏览器页关闭；实机截图output/playwright/dsh-duo-0.1.2-chat.png仅本地Git排除。最终DSH保持CHAT官网登录视图，无测试草稿或消息，不写全球记忆。下一轮独立修复0.1.3，本轮不可再重复涨号。
 - 收尾检查：8份当前Markdown链接/代码围栏及git diff --check通过；暂存区为空，15份当前源码/文档文件为本地修改/新增，HEAD/origin仍f3ab5c7且0/0。最终包内README与工作区hash一致，所有产物/截图均未进入Git；没有本轮远程安装新提交的验证，因为尚未推送。
+
+## W017 · 2026-10-10 · T06/T08/T09/T13 · 登录布局与设置
+
+- 用户四张截图确认W016漏验登录后的导航闪现、隐藏后的宽度占位、紧凑网页头部和官网设置可达性。此前sign_in实测/模拟不能证明登录场景完成。
+- 要求专门CHAT设置（真实网页账号、语言/外观等官网设置），删除整个插件顶部工具栏，折叠窗口控制与HARNESS一致；这些直接要求授权有限网页设置UI适配，不授权读取凭据/私有API或修改DSH安装包。
+- main干净、fetch成功，基线b0b8e4b与origin同步；版本计划0.1.2→0.1.3尚未递增，单Agent负责；无Git交付授权。
+
+- 已在构建候选包前从0.1.2递增为0.1.3一次；本轮继续调试/打包不重复涨号。固定官方settings.section owner为close，shell.leading由AppFrame管理Mac折叠位置；新增ui-settings开发类型依赖和manifest依赖，不私有捆绑服务/React。官网公共无凭据请求429，未用它判断guest布局。
+
+- W017实机失败补齐：官网头像在隐藏导航时几何为零，改为已确认导航中的公开头像兜底；设置使用ds-button/ds-select，普通click无法展开语言下拉，改实际文本触发器pointerdown/mousedown并读回确认。中文菜单是“系统设置”，而“通用设置”包含“设置”造成内层容器误判，补空图标关闭控件定位。临时结构诊断已移除；失败只显示可操作提示。
+- 用户随后取消外观选项、CHAT默认暗色：原生设置仅保留系统语言，首次适配通过官网公开UI确认深色，再解除guest遮罩。加入guest内部preparing保护登录SPA在host事件前的可见帧；网页登录页和恢复清空自有设置缓存。此补充仍属同轮0.1.3，不重复递增。
+- 当前28项测试/生产类型构建通过。隔离fixture改为自定义ds-button/ds-select及pointerdown，已确认中文读回、Dark、弹窗关闭与sign_in清空；实机已有登录态的中文/深色、官网完整设置、折叠旧对话→新建空主页、刷新中文保留及原Harness主面板往返已观察。没有填写凭据/验证码或发送消息，首次完整重新登录仍待验收。
+- 打包调试：pnpm pack反馈不足；默认npm cache写入被sandbox限制，改临时npm cache后显式build+pack成功，不改系统权限。CLI help要求profile且尝试触发原profile锁，sandbox拒绝，无配置变化；未猜测disable命令，恢复验证继续使用官方原界面。Python中文stdin编码失败和一次patch上下文不匹配均未写入文件，改精确apply_patch成功。
+
+- 补查原官网导航恢复后，snapshot恢复会取消原生设置多步请求；Client设置入口先回到适配状态，保留请求流程，单元回归及最终fixture原导航可见→原生设置读回通过。本轮最终build/28项测试通过，首屏fixture从System/opacity0到Dark/opacity1；warnings/errors为0。
+- 最终包artifacts/dsh-duo-0.1.3-1bec00d16d90.tgz，SHA256 1bec00d16d90559811889a2ccd9798807b3d0191db36d58f0c82853d5c45c738，16文件/README与版本匹配。官方CLI更新desktop实际0.1.3，Host c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client 4ead262e29b350e2ebe5ccff205fd07f36254040e3abf52084c49030396de35b逐项匹配build。所有中间0.1.3包包括30f7c02661f3均被取代；泛化peer warning保留。
+- 本轮Harness原插件页禁用恢复HARNESS徽标/新建/插件导航，重启用授权收敛且保持Harness；最终更新从Harness开始，进入Chat原生设置读取真实账号/简体中文、无外观选项、固定暗色，主区无重复导航/残留占位截图确认。首次完整重新登录/逐帧、消息/跨端历史、Chat直接禁用/完整卸载及其他平台仍未验收，详见handoff。
+- 工作已交还用户验收；AGENTS、需求/架构/路线/资料及handoff/worklog同步完整目标、发现、失败、实现和证据，README只同步用户功能/版本/权限/限制。本轮0.1.2→0.1.3一次，无Git交付/全球记忆；下轮独立修复0.1.4。最终DSH保持CHAT中文空主页，无验收草稿/消息；个人截图仅本地output/playwright且Git排除，临时preview进程/页已关闭。
+- 收尾fetch成功；main/HEAD/origin仍b0b8e4b，0/0。git diff --check和8份Markdown链接/围栏检查通过，21份源码/测试/文档未暂存、暂存区空；最终包与截图均被Git排除。未stage/commit/tag/push，工作区成果等待用户验收及手动同步，没有本轮远程新提交安装验证。

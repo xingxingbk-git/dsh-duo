@@ -1,8 +1,9 @@
 import { useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { BrandWordmark } from '@deepseek-ai/dsh-client-ui-primitives'
+import { BrandWordmark, IconNewChatOutlineRegular, IconPanelLeftOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { duoStyles } from './styles.js'
 import type { WebsiteCommand, WebsiteNavigation } from './website-navigation.js'
 
@@ -218,4 +219,37 @@ export function DuoChatPanel({ bridge }: PropsRuntime<'main'> & DuoBridgeProps) 
     <DuoStyles />
     {!state.desktopAvailable && <div className="dsh-duo-unavailable"><h2>需要 DSH 桌面版</h2><p>当前环境未提供官方内嵌浏览器能力。</p><button type="button" onClick={() => bridge.selectMode('harness')}>返回 HARNESS</button></div>}
   </div>
+}
+
+/** Same public primitive icons, geometry and tooltip behavior as native rc.2 chrome. */
+export function DuoLeadingControls({bridge}: PropsRuntime<'shell.leading'> & DuoBridgeProps) {
+  const state = useDuo(bridge)
+  return <div className="dsh-duo-leading"><DuoStyles />
+    <Tooltip label="展开侧边栏" delayMs={500}><button type="button" aria-label="展开侧边栏" onClick={() => bridge.toggleSidebar()}><IconPanelLeftOutlineRegular size={16}/></button></Tooltip>
+    <Tooltip label="新建对话" delayMs={500}><button type="button" aria-label="新建官网对话" disabled={!state.modeEnabled || !state.websiteNavigation.canCreate} onClick={() => bridge.commandWebsite({type:'new'})}><IconNewChatOutlineRegular size={16}/></button></Tooltip>
+  </div>
+}
+
+export function DuoChatSettings({bridge, close}: PropsRuntime<'settings.section'> & DuoBridgeProps) {
+  const state = useDuo(bridge)
+  const nav = state.websiteNavigation
+  const available = state.mode === 'chat' && state.modeEnabled && nav.status === 'ready'
+  useLayoutEffect(() => { if (available) bridge.commandWebsite({type:'settings-read'}) }, [bridge,available])
+  const preference = (key:'language'|'theme',value:string) => bridge.commandWebsite({type:'setting',key,value})
+  const language = /中文|Chinese/i.test(nav.settings?.language ?? '') ? 'zh-CN' : /English|英语/i.test(nav.settings?.language ?? '') ? 'en' : nav.settings?.language ? 'system' : ''
+  const openWebsiteSettings = () => { bridge.commandWebsite({type:'settings-open'}); close() }
+  return <section className="dsh-duo-settings"><DuoStyles/><h2>CHAT设置</h2>
+    <div className="dsh-duo-settings-card"><h3>DeepSeek Chat 账号</h3>
+      <strong>{nav.accountName || (nav.status === 'sign-in' ? '尚未登录官网' : nav.status === 'ready' ? '官网已登录，账号资料暂未识别' : '尚未确认官网账号')}</strong>
+      <p>此处显示网页账号。DSH授权和网页登录分别管理。</p>
+      {state.mode !== 'chat' && <button onClick={() => {bridge.selectMode('chat');close()}} disabled={!state.modeEnabled}>进入CHAT</button>}
+    </div>
+    <div className="dsh-duo-settings-card"><h3>网页偏好</h3><p>CHAT固定使用暗色。系统语言由官网保存。</p>
+      <div className="dsh-duo-settings-row"><span>系统语言</span><select aria-label="系统语言" value={language} disabled={!available || nav.settings?.pending || !language} onChange={e => preference('language',e.target.value)}><option value="">{nav.status==='sign-in' ? '官网未登录' : !available ? '暂无可用值' : '正在读取…'}</option><option value="system">跟随系统</option><option value="zh-CN">简体中文</option><option value="en">English</option></select></div>
+      {nav.settings?.pending && <p role="status">正在确认官网设置…</p>}
+      {nav.settings?.error && <p role="alert">{nav.settings.error}</p>}
+      <button onClick={openWebsiteSettings} disabled={!available || nav.settings?.pending}>打开官网设置</button>
+      <button onClick={() => {bridge.toggleWebsiteNavigation();close()}} disabled={!available}>官网完整导航</button><button onClick={() => {bridge.reloadWebsite();close()}} disabled={!state.modeEnabled}>重新加载网页</button>
+    </div>
+  </section>
 }

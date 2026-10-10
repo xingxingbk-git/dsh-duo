@@ -1,7 +1,7 @@
 import { createElement, useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
-import { DuoModeSelector, DuoStyles, useDuo, type DuoBridgeProps } from './ui.js'
+import { DuoStyles, useDuo, type DuoBridgeProps } from './ui.js'
 import { emptyNavigation, parseWebsiteNavigation, websiteCommandScript, type WebsiteCommand } from './website-navigation.js'
 
 const WEBSITE_URL = 'https://chat.deepseek.com/'
@@ -38,6 +38,7 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
   const [requestedGeneration, setRequestedGeneration] = useState<number | null>(null)
   const [reservation, setReservation] = useState<ReservationState | null>(null)
   const [recoveryRevision, setRecoveryRevision] = useState(0)
+  const [presentationReady, setPresentationReady] = useState(false)
   const needsRecovery = useRef(false)
   const previousMode = useRef(state.mode)
   const guest = useRef<WebsiteWebview | null>(null)
@@ -56,6 +57,7 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
     let stopped = false
     let held: DesktopBrowserReservation | undefined
     setReservation(null)
+    setPresentationReady(false)
     if (nativeBrowser === undefined || state.accountStorageKey === null
       || requestedGeneration !== state.authorizationGeneration) return
     const generation = state.authorizationGeneration
@@ -119,10 +121,11 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
       try {
         if (!current.getURL().startsWith('https://chat.deepseek.com/')) return
         const result = parseWebsiteNavigation(await execute(command))
-        if (!events.signal.aborted) bridge.reportWebsiteNavigation(generation, result)
+        if (!events.signal.aborted) { bridge.reportWebsiteNavigation(generation, result); setPresentationReady(result.status !== 'loading') }
       } catch {
         if (!events.signal.aborted) {
           bridge.reportWebsiteNavigation(generation, { ...emptyNavigation(), status: 'unsupported' })
+          setPresentationReady(true)
           try { await execute({type:'restore'}) } catch { /* The next ready event retries a recovered guest. */ }
         }
       }
@@ -151,7 +154,8 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
       if (!bootstrapped) { bootstrapped = true; navigate(WEBSITE_URL) }
       else { bridge.reportWebsiteNavigation(generation, emptyNavigation()); syncNavigation() }
     }, { signal: events.signal })
-    current.addEventListener('did-start-loading', () => report(true), { signal: events.signal })
+    current.addEventListener('did-start-loading', () => { setPresentationReady(false); report(true) }, { signal: events.signal })
+    current.addEventListener('did-navigate-in-page', () => { setPresentationReady(false); syncNavigation() }, { signal: events.signal })
     current.addEventListener('did-stop-loading', () => { report(false); syncNavigation() }, { signal: events.signal })
     current.addEventListener('did-fail-load', event => {
       const failure = event as Event & { readonly isMainFrame?: boolean; readonly errorCode?: number }
@@ -205,22 +209,17 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
   return <section className="dsh-duo-web-surface" aria-label="DeepSeek 官网网页" aria-hidden={!visible} style={{
     display: visible ? 'flex' : 'none',
     left: rect?.left ?? 0,
-    top: rect?.top ?? 0,
+    top: `calc(${rect?.top ?? 0}px + var(--dsh-frame-top-clearance, 0px))`,
     width: rect?.width ?? 0,
-    height: rect?.height ?? 0,
+    height: `calc(${rect?.height ?? 0}px - var(--dsh-frame-top-clearance, 0px))`,
   }}>
     <DuoStyles />
-    <header className="dsh-duo-web-toolbar" data-window-drag>
-      {state.brandAnchor === null && <button type="button" onClick={() => bridge.toggleSidebar()} aria-label="显示或隐藏侧边栏"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M7 3v14" stroke="currentColor" strokeWidth="1.4"/></svg></button>}
-      <strong>DeepSeek 官网</strong><small>chat.deepseek.com</small>
-      <span className="dsh-duo-web-toolbar-spacer" />
-      {state.brandAnchor === null && <DuoModeSelector bridge={bridge} state={state} />}
-    </header>
     <div className="dsh-duo-web-content">
       {activeReservation !== null && createElement('webview', {
         key: activeReservation.native.lease,
         ref: attachGuest,
         className: 'dsh-duo-webview',
+        style: { opacity: presentationReady ? 1 : 0 },
         name: activeReservation.native.lease,
         partition: activeReservation.native.partition,
         src: `about:blank#${activeReservation.native.lease}`,
@@ -228,7 +227,7 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
         'data-sidebar-browser-frame': 'webview',
         'aria-label': 'DeepSeek 官网，登录、聊天和历史由网页提供',
       })}
-      {(nativeBrowser === undefined || state.webError !== null || activeReservation === null) && <div className={`dsh-duo-web-status${state.webError !== null ? ' dsh-duo-web-status-error' : ''}`} role={state.webError !== null ? 'alert' : 'status'}>
+      {(nativeBrowser === undefined || state.webError !== null || activeReservation === null || !presentationReady) && <div className={`dsh-duo-web-status${state.webError !== null ? ' dsh-duo-web-status-error' : ''}`} role={state.webError !== null ? 'alert' : 'status'}>
         <strong>{nativeBrowser === undefined ? '当前环境无法内嵌网页' : state.webError !== null ? '网页暂时无法使用' : '正在打开 DeepSeek 官网'}</strong>
         <p>{state.webError || (nativeBrowser === undefined ? '需要提供官方浏览器能力的 DSH 桌面版。' : '网页登录后，由官网显示该账号的聊天和历史。')}</p>
         {state.webError !== null && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled}>重试网页</button>}

@@ -38,8 +38,9 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 - Harness侧栏/navigation原树保留；`sidebar.brand.name`仅替换装饰内容：官方DeepSeek字标（自有SVG视口裁掉HARNESS徽标）及自有锚点。实际按钮是官方additive `shell.overlay`的独立组件；不复制/包装未导出的SidebarRoot。W016新增用户批准的有限侧栏DOM适配，见下一条。
 - `src/sidebar-adapter.ts`从自己的品牌元素沿已核对rc.2祖先结构定位侧栏，先识别renderer的data-slot=sidebar.brand.name/display:contents包装，再校验aria-hidden品牌identity、data-window-drag行和直接子级新会话按钮；只加自有前缀的临时属性，以flex填满品牌间距、CHAT隐藏插件行/空导航区，捕获原新会话click并转交受门槛保护的官网new。官网未就绪/登录页时禁用该新建按钮；HARNESS恢复原disabled和点击行为，卸载移除属性/监听器并恢复原值。绑定归Client所有，品牌因折叠卸载时仍保持，展开重新绑定、Client卸载撤回。观察范围仅该root的childList；不改Session、私有服务或安装包。未知结构不适配，并在自有交互层提示顶部仍为HARNESS语义；不能称为官方新建接口。
 - 品牌owner的aria-hidden/外层New Session仍存在，交互层在该祖先外，提供按键与屏幕阅读器语义。rc.2品牌行24px且会裁剪，锚点为112×24px；完全可见才发布矩形，折叠/裁剪时隐藏，重新可见时恢复。底部和右下角旧入口已移除；正常授权无常驻刷新，故障时在顶部说明并重试。Mac实测通过，Web/Windows外层按钮及其他平台仍需实测。
-- 两种模式共用原生SidebarRoot及shell.leading。仅CHAT期间通过slots.inject注册 `sidebar.workspaces`，退出后dispose恢复工作区；owner仅wide/expandSidebar。顶部窗口/品牌/新会话视觉、底部真实settings及背景透明/模糊由原组件持续管理，不创建另一套侧栏。
-- Mac折叠时main扩展至窗口左沿，保活网页层会覆盖原shell.leading。品牌锚点不可见时，网页工具条通过公开layout.toggleSidebar提供展开入口和备用模式按钮；展开后撤回备用控件，不改原shell.leading注册。
+- 两种模式共用原生SidebarRoot；仅CHAT期间通过slots.inject注册 `sidebar.workspaces`，退出后dispose恢复工作区；owner仅wide/expandSidebar。顶部窗口/品牌/新会话视觉、底部真实settings及背景透明/模糊由原组件持续管理，不创建另一套侧栏。
+- W017删除整个网页工具栏。CHAT期间按官方shell.leading契约注册展开/官网新建图标，与rc.2原生HeaderLeadingControls使用同一公开图标、28px尺寸、8px间距和Tooltip；HARNESS/卸载dispose恢复内置项。Mac官方AppFrame仅在全折叠时挂载该Slot。guest矩形扣除官方--dsh-frame-top-clearance，避免overlay遮住原生窗口控制；不硬改核心z-index或窗口按钮。
+- 官方settings.section注册持久“CHAT设置”，owner仅close；原设置导航/弹窗继续由DSH维护。新增ui-settings开发类型和manifest依赖，不复制私有组件，也不增加运行时共享模块。设置显示真实官网可见账号、系统语言，CHAT固定暗色，无外观选择。
 - 原菜单/快捷键仍调用uiWorkspace.startSession，没有公开模式替换回调；W016有限例外仅处理顶部鼠标/键盘激活click及非Mac品牌按钮，列表＋仍可新建。监听主面板离开CHAT后清理覆盖，不改写原导航选择；不能把顶部按钮结果当作菜单/快捷键Session保真。
 - 所有注册与 stream 都由 Cordis enclosing effect 管理，末尾清理先恢复 panel，再卸载贡献和 guest。完整 Desktop 卸载恢复还需真实验收。
 
@@ -65,7 +66,9 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 `src/website-navigation.ts`为自包含DOM适配函数，经Electron公开webview.executeJavaScript仅在插件持有的批准guest执行。限定HTTPS官方origin及已在页面出现的 `/a/chat/s/<id>` 链接，读取标题/分组/选中路径，不访问正文、Cookie、storage、应用私有全局、凭据或请求接口。没有额外依赖、preload或安全策略修改。
 
-网页导航以窄列几何、真实历史链接、新对话标签及不含编辑器等条件定位；原生列表按页面次序分组，可搜索已加载标题，点击真实页面链接/新建元素，加载更早时滚动原网页列表。承接成功才加入可撤回的局部style隐藏网页侧栏；页面结构变化或出错清空镜像、撤回隐藏样式并提示使用官网原导航。W016按用户截图删除常驻“刷新网页”“官网导航”按钮及底部提示条，网页故障卡片中保留重试；折叠备用展开/模式入口保留。原导航管理入口不再由工具条提供，尚不能称为官网所有操作已镜像。没有项目创建、假历史或另一份聊天数据。
+网页导航以窄列几何、真实历史链接、新对话标签及不含编辑器等条件定位；原生列表按页面次序分组，可搜索已加载标题，点击真实页面链接/新建元素，加载更早时滚动原网页列表。W017同时隐藏有宽度的外层导航轨道、将编辑器所在内容列扩展、隐藏无文本的紧凑导航头部，消除占位。guest加载/路由变化先遮罩；guest自有MutationObserver在官网React提交后的微任务中重做适配，并以局部preparing样式遮住登录SPA首帧，完成布局/暗色后显示。未知结构恢复原界面，不裁切视口冒充移入侧栏。
+
+设置适配仅操作官网公开显示的头像菜单、系统设置、通用设置、语言下拉/深色按钮及关闭控件。精确标签支持中英文，自定义ds-select通过文本触发器的公开pointerdown/mousedown展开；读回官网值才确认成功。12秒设置期限失败后提供原官网入口，不输出内部结构诊断。设置缓存为自有DOM临时属性，官网登录页/恢复/账号代次变化清空，Host/Client返回值限长并栅栏隔离。无Cookie、storage、私有应用状态/API或聊天正文读取。CHAT设置提供官网完整设置/导航及重新加载入口，不宣称官网全部管理动作已镜像。
 
 W016登录核查：固定deepseek-account-platform默认Platform origin为platform.deepseek.com、inference origin为api.deepseek.com；公开PlatformSession仅用于平台嵌入，Browser acquire由主进程生成进程内隔离partition。未发现面向chat.deepseek.com的官方SSO/凭据交换入口，因此本版不实现共用登录，也不调用Host-only凭据方法或迁移Cookie。重启网页登录失效来自分区生命周期，不能归因于DSH授权失败。
 

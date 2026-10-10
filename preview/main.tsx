@@ -1,11 +1,11 @@
 /** Development fixture only. Never imported by either production plugin entry. */
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MainPanelId, PanelInfo, UsePanelInfo } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { CHAT_PANEL, ModeController, type ModeAuthorization } from '../src/core/mode.js'
-import { DuoBrandName, DuoBrandControl, DuoChatPanel, DuoChatNavigation, useDuo, type DuoUIBridge, type DuoViewState, type DuoViewportRect } from '../src/ui.js'
+import { DuoBrandName, DuoBrandControl, DuoChatPanel, DuoChatNavigation, DuoChatSettings, DuoLeadingControls, useDuo, type DuoUIBridge, type DuoViewState, type DuoViewportRect } from '../src/ui.js'
 import { DuoWebSurface } from '../src/web-surface.js'
 import { adaptWebsiteNavigation, emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from '../src/website-navigation.js'
 import { createSidebarBinding } from '../src/sidebar-adapter.js'
@@ -150,7 +150,11 @@ const bridge: DuoUIBridge = {
   },
   reportWebsiteNavigation: (generation, value) => { if (generation === authorizationGeneration) { websiteNavigation = parseWebsiteNavigation(value); publish() } },
   bindWebsiteNavigation: (generation, handler) => { navigationHandler = handler; return () => { if (navigationHandler === handler) navigationHandler = null } },
-  commandWebsite: command => { if (cached.mode === 'chat' && cached.modeEnabled) void navigationHandler?.(command) },
+  commandWebsite: command => {
+    if (cached.mode !== 'chat' || !cached.modeEnabled) return
+    if (command.type==='settings-read' || command.type==='settings-open' || command.type==='setting') {showWebsiteNavigation=false;publish()}
+    void navigationHandler?.(command)
+  },
   toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },
 }
 sidebar = createSidebarBinding(() => ({chat:cached.mode === 'chat',canCreate:cached.modeEnabled && websiteNavigation.canCreate}),
@@ -172,8 +176,33 @@ function simulateGuest(element: HTMLElement): void {
     queueMicrotask(() => { if (element.isConnected) element.dispatchEvent(new Event('did-stop-loading')) })
   }
   const fixtureDoc = document.implementation.createHTMLDocument('navigation fixture')
-  fixtureDoc.body.innerHTML = '<aside><button>开启新对话</button><div>置顶</div><a href="/a/chat/s/fixture-a">模拟对话 A</a><div>昨天</div><a href="/a/chat/s/fixture-b">模拟对话 B</a></aside><main><textarea aria-label="fixture draft">fixture draft</textarea></main>'
+  fixtureDoc.body.innerHTML = '<div class="fixture-grid"><div class="fixture-track"><aside><button>开启新对话</button><div>置顶</div><a href="/a/chat/s/fixture-a">模拟对话 A</a><div>昨天</div><a href="/a/chat/s/fixture-b">模拟对话 B</a><footer><img alt="fixture avatar"><button>官网模拟账号 A</button></footer></aside></div><main><div class="fixture-chrome"><button><svg/></button><button><svg/></button></div><textarea aria-label="fixture draft">fixture draft</textarea></main></div>'
   Object.assign(fixtureDoc.querySelector('aside')!, {getBoundingClientRect: () => ({width:280,height:600,left:0,top:0,right:280,bottom:600})})
+  Object.assign(fixtureDoc.querySelector('.fixture-track')!, {getBoundingClientRect:()=>({width:280,height:600,left:0,top:0,right:280,bottom:600})})
+  Object.assign(fixtureDoc.querySelector('.fixture-grid')!, {getBoundingClientRect:()=>({width:1100,height:600,left:0,top:0,right:1100,bottom:600})})
+  Object.assign(fixtureDoc.querySelector('.fixture-chrome')!, {getBoundingClientRect:()=>({width:120,height:40,left:280,top:0,right:400,bottom:40})})
+  Object.assign(fixtureDoc.querySelector('img')!, {getBoundingClientRect:()=>({width:20,height:20,left:10,top:560,right:30,bottom:580})})
+  Object.assign(fixtureDoc.querySelector('footer')!, {getBoundingClientRect:()=>({width:280,height:40,left:0,top:550,right:280,bottom:590})})
+  let fixtureLanguage='English'
+  let fixtureTheme='System'
+  fixtureDoc.querySelector('footer button')!.addEventListener('click',()=>{
+    if(fixtureDoc.querySelector('[role=menu]')) return
+    const menu=fixtureDoc.createElement('div');menu.setAttribute('role','menu');menu.innerHTML='<div class="ds-dropdown-menu-option">系统设置</div>'
+    menu.querySelector('.ds-dropdown-menu-option')!.addEventListener('click',()=>{
+      menu.remove()
+      const dialog=fixtureDoc.createElement('div');dialog.setAttribute('role','dialog')
+      dialog.innerHTML='<header>系统设置<button aria-label="close"><svg/></button></header><div class="ds-button">通用设置</div><div><span>Theme</span><div class="ds-button">Light</div><div class="ds-button">Dark</div><div class="ds-button">System</div></div><div><span>Language</span><div class="ds-select"><div><span></span><svg/></div></div></div>'
+      dialog.querySelector('header button')!.addEventListener('click',()=>dialog.remove())
+      dialog.querySelectorAll('.ds-button').forEach(btn=>{if(['Light','Dark','System'].includes(btn.textContent!)){btn.setAttribute('aria-pressed',String(btn.textContent===fixtureTheme));btn.addEventListener('click',()=>{fixtureTheme=btn.textContent!;dialog.querySelectorAll('.ds-button').forEach(el=>el.setAttribute('aria-pressed',String(el.textContent===fixtureTheme)))})}})
+      const languageControl=dialog.querySelector('.ds-select span')!;languageControl.textContent=fixtureLanguage
+      languageControl.addEventListener('pointerdown',()=>{
+        const list=fixtureDoc.createElement('div');list.setAttribute('role','listbox')
+        for(const value of ['English','简体中文','System']){const opt=fixtureDoc.createElement('button');opt.setAttribute('role','option');opt.textContent=value;opt.addEventListener('click',()=>{fixtureLanguage=value;languageControl.textContent=value;list.remove()});list.append(opt)}
+        fixtureDoc.body.append(list)
+      })
+      fixtureDoc.body.append(dialog)
+    });fixtureDoc.body.append(menu)
+  })
   let fixturePath = '/a/chat/s/fixture-a'
   let fixtureNewCount = 0
   fixtureDoc.querySelector('button')!.addEventListener('click', () => { fixturePath = '/'; fixtureNewCount++ })
@@ -192,6 +221,13 @@ function simulateGuest(element: HTMLElement): void {
     history.forEach((link,index) => link.setAttribute('href',savedLinks[index]!))
     element.setAttribute('data-preview-original-navigation',fixtureDoc.getElementById('dsh-duo-website-navigation-style') ? 'hidden' : 'visible')
     element.setAttribute('data-preview-path',fixturePath)
+    element.setAttribute('data-preview-track',fixtureDoc.querySelector('.fixture-track')!.hasAttribute('data-dsh-duo-navigation')?'hidden':'visible')
+    element.setAttribute('data-preview-content',String(fixtureDoc.querySelector('main')!.hasAttribute('data-dsh-duo-content')))
+    element.setAttribute('data-preview-chrome',String(fixtureDoc.querySelector('.fixture-chrome')!.hasAttribute('data-dsh-duo-web-chrome')))
+    element.setAttribute('data-preview-language',fixtureLanguage)
+    element.setAttribute('data-preview-theme',fixtureTheme)
+    element.setAttribute('data-preview-dialog',String(!!fixtureDoc.querySelector('[role=dialog]')))
+
     element.setAttribute('data-preview-new-count',String(fixtureNewCount))
     return result
   } })
@@ -234,11 +270,12 @@ const previewStyles = `
   .preview-main{flex:1;min-width:0;min-height:0}.preview-original{height:100%;display:flex}.preview-conversation{padding:32px;flex:1;min-width:0}.preview-conversation h2{font-size:24px;margin:0 0 12px}.preview-conversation p{font-size:13px;line-height:1.8;color:#787d88}
   .preview-conversation textarea{width:100%;height:110px;padding:12px;border:1px solid #dfe3ea;border-radius:9px;resize:vertical}.preview-rightbar{width:240px;background:#fafbfc;padding:26px 18px;border-left:1px solid #e4e7ed}
   .preview-rightbar h3{font-size:13px;margin:0 0 12px}.preview-rightbar dl{font-size:12px;color:#727887}.preview-rightbar dd{margin:4px 0 15px;color:#252a35}
-  .preview-ledger{font-size:11px;line-height:1.65;color:#697182;overflow-wrap:anywhere}.preview-ledger strong{color:#252a35}.preview-ledger ol{padding-left:17px}.preview-ledger small{font-size:10px}
+  .preview-settings{position:fixed;inset:20% 20%;z-index:60;background:#fff;border:1px solid #ddd;border-radius:16px;padding:20px;overflow:auto}.preview-leading{position:fixed;left:18px;top:150px;z-index:30;background:white}.preview-ledger{font-size:11px;line-height:1.65;color:#697182;overflow-wrap:anywhere}.preview-ledger strong{color:#252a35}.preview-ledger ol{padding-left:17px}.preview-ledger small{font-size:10px}
   @media(max-width:850px){.preview-rightbar{width:180px}.preview-harness-sidebar{width:250px}.preview-conversation{padding:20px}}
 `
 
 function Preview() {
+  const [settingsOpen,setSettingsOpen]=useState(false)
   const state = useDuo(bridge)
   const chat = state.mode === 'chat'
   const counts = { acquired: ledger.filter(item => item.action === 'acquire').length, released: ledger.filter(item => item.action === 'release').length }
@@ -247,7 +284,7 @@ function Preview() {
     <header className="preview-header">
       <h1>dsh-duo 开发预览 · 模拟环境，不是 DSH 实机验收</h1>
       <p>复用插件实际 UI 和 ModeController；账号、布局和网页容器均为模拟，不连接 DeepSeek 官网。顶部品牌控件使用实际定位组件。</p>
-      <div className="preview-actions" aria-label="开发模拟控制">
+      <div className="preview-actions" aria-label="开发模拟控制"><button onClick={()=>setSettingsOpen(true)}>CHAT设置</button>
         <button type="button" onClick={() => acceptAuthorization({ status: 'pending', accountId: null, epoch: `preview-${++epochNumber}`, error: null })}>模拟授权待确认</button>
         <button type="button" onClick={() => acceptAuthorization({ status: 'unavailable', accountId: null, epoch: `preview-${++epochNumber}`, error: 'fixture-unavailable' })}>模拟授权失败</button>
         <button type="button" onClick={() => authorize('A')}>模拟授权账号 A</button>
@@ -295,6 +332,8 @@ function Preview() {
         {chat && <DuoChatPanel {...slotProps} bridge={bridge} />}
       </main>
     </div>
+    {chat && sidebarCollapsed && <div className="preview-leading"><DuoLeadingControls {...slotProps} bridge={bridge}/></div>}
+    {settingsOpen && <div className="preview-settings" role="dialog" aria-label="模拟DSH设置"><button onClick={()=>setSettingsOpen(false)}>关闭设置</button><DuoChatSettings {...slotProps} bridge={bridge} close={()=>setSettingsOpen(false)}/></div>}
     <DuoBrandControl {...slotProps} bridge={bridge} />
     <DuoWebSurface {...slotProps} bridge={bridge} nativeBrowser={nativeBrowser} />
   </div>

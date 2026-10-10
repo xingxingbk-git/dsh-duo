@@ -3,11 +3,12 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { CHAT_PANEL, ModeController } from './core/mode.js'
 import { authorizationSchema, DUO_REMOTE_CONTRIBUTION } from './protocol.js'
 import type { AuthorizationState, DuoClientMetadata } from './protocol.js'
-import { DuoBrandName, DuoBrandControl, DuoChatNavigation, DuoChatPanel } from './ui.js'
+import { DuoBrandName, DuoBrandControl, DuoChatNavigation, DuoChatPanel, DuoLeadingControls, DuoChatSettings } from './ui.js'
 import type { DuoUIBridge, DuoViewState, DuoViewportRect } from './ui.js'
 import { DuoWebSurface } from './web-surface.js'
 import { emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from './website-navigation.js'
@@ -54,7 +55,9 @@ export function apply(ctx: Context): void {
     readPanel: () => ctx.layout.panelInfo.getSnapshot().activePanelId,
     selectPanel: panel => { ctx.layout.selectPanel(panel as MainPanelId | null) },
     mountChatNavigation: () => {
-      return ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -100, inject: () => ({ bridge }) }, DuoChatNavigation))
+      const navigation = ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -100, inject: () => ({ bridge }) }, DuoChatNavigation))
+      const leading = ctx.slots.inject('shell.leading', () => ctx.slots.register({name:'shell.leading',priority:-100,inject:()=>({bridge})}, DuoLeadingControls))
+      return () => { leading(); navigation() }
     },
     cancelAccount: () => { authorizationGeneration++; webLoading = false; webError = null; websiteNavigation = emptyNavigation(); navigationHandler = null; publish() },
   }, Boolean(nativeBrowser))
@@ -220,6 +223,11 @@ export function apply(ctx: Context): void {
     commandWebsite: command => {
       if (disposed || mode.getSnapshot().mode !== 'chat' || !mode.canEnter() || !navigationHandler) return
       if (command.type === 'open' && !websiteNavigation.conversations.some(item => item.href === command.href)) return
+      // Native settings needs the adapter's multi-step command to stay active;
+      // restoring the original navigation would cancel it at the next poll.
+      if (command.type==='settings-read' || command.type==='settings-open' || command.type==='setting') {
+        showWebsiteNavigation=false; publish()
+      }
       void navigationHandler(command)
     },
     toggleWebsiteNavigation: () => { showWebsiteNavigation = !showWebsiteNavigation; publish() },
@@ -233,6 +241,7 @@ export function apply(ctx: Context): void {
   publish()
   // The enclosing effect's final cleanup restores navigation before registered main keys disappear.
   ctx.effect(() => {
+    ctx.slots.inject('settings.section', () => ctx.slots.register({name:'settings.section',id:'dsh-duo.chat-settings',order:80,label:'CHAT设置',inject:()=>({bridge})}, DuoChatSettings))
     ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: CHAT_PANEL, inject: () => ({ bridge }) }, DuoChatPanel))
     ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -100, inject: () => ({ bridge }) }, DuoBrandName))
     ctx.slots.inject('shell.overlay', () => [
