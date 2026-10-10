@@ -7,10 +7,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { checkArtifact } from './check-artifact.mjs'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'dsh-duo-git-install-'))
+const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'dsh-chat-git-install-'))
 const source = path.join(temporaryRoot, 'source')
 const consumer = path.join(temporaryRoot, 'consumer')
-const pnpm = process.env.DSH_DUO_INSTALL_PNPM ?? process.env.npm_execpath
+const pnpm = process.env.DSH_CHAT_INSTALL_PNPM ?? process.env.npm_execpath
 assert(pnpm, 'Run this check through pnpm check:git-install')
 
 function run(command, args, cwd, options = {}) {
@@ -26,7 +26,7 @@ try {
   await mkdir(source)
   await mkdir(consumer)
   // A source-only Git fixture deliberately excludes lib, dependencies and local data.
-  for (const item of ['package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'cordis.patch.yml', 'README.md', 'src', 'scripts']) {
+  for (const item of ['package.json', 'pnpm-lock.yaml', 'tsconfig.json', 'cordis.patch.yml', 'README.md', 'assets', 'src', 'scripts']) {
     await cp(path.join(projectRoot, item), path.join(source, item), { recursive: true })
   }
   await writeFile(path.join(source, '.gitignore'), 'node_modules/\nlib/\nartifacts/\n')
@@ -39,16 +39,16 @@ try {
   const major = Number(run(process.execPath, [pnpm, '--version'], consumer).trim().split('.')[0])
   assert(major >= 10, 'Git installation check requires pnpm 10 or later')
   // pnpm 11 authorizes a Git identity; pnpm 10's allowBuilds only accepts versions.
-  const approval = major >= 11 ? [] : ['--allow-build=dsh-duo']
+  const approval = major >= 11 ? [] : ['--allow-build=dsh-chat']
   if (major >= 11) {
-    await writeFile(path.join(consumer, 'pnpm-workspace.yaml'), `allowBuilds:\n  ${JSON.stringify(`dsh-duo@${specifier}`)}: true\n`)
+    await writeFile(path.join(consumer, 'pnpm-workspace.yaml'), `allowBuilds:\n  ${JSON.stringify(`dsh-chat@${specifier}`)}: true\n`)
   }
   run(process.execPath, [pnpm, 'add', specifier, ...approval, '--reporter=append-only'], consumer)
-  const installed = path.join(consumer, 'node_modules/dsh-duo')
+  const installed = path.join(consumer, 'node_modules/dsh-chat')
   await checkArtifact(installed)
   const installedManifest = JSON.parse(await readFile(path.join(installed, 'package.json'), 'utf8'))
-  assert.equal(installedManifest.name, 'dsh-duo')
-  run(process.execPath, ['--input-type=module', '-e', "const p = await import('dsh-duo'); if (p.name !== 'dsh-duo' || typeof p.apply !== 'function') process.exit(1); console.log('Installed Git package Host import passed.');"], consumer)
+  assert.equal(installedManifest.name, 'dsh-chat')
+  run(process.execPath, ['--input-type=module', '-e', "const p = await import('dsh-chat'); if (p.name !== 'dsh-chat' || typeof p.apply !== 'function') process.exit(1); console.log('Installed Git package Host import passed.');"], consumer)
   console.log('Source-only Git install passed: prepare built both entries; installed Host imports and Client registers lazily.')
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true })

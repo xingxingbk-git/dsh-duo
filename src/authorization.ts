@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import type { AuthorizationState, DuoClientMetadata } from './protocol.js'
+import type { AuthorizationState, DshChatClientMetadata } from './protocol.js'
 
 /** Only the official credential-free surface is accepted by this adapter. */
 export interface AccountReader {
   getState(): Promise<{ status: 'signed-out' | 'credential-stored' }>
-  getProfile(metadata: DuoClientMetadata): Promise<
+  getProfile(metadata: DshChatClientMetadata): Promise<
     { status: 'ready'; value: { id: string | null } } | { status: 'failed' } | null
   >
   watch(signal: AbortSignal): AsyncIterable<{ status: 'signed-out' | 'credential-stored' }>
@@ -18,7 +18,7 @@ export class AuthorizationAuthority {
   private revision = 0
   private started = false
   private closed = false
-  private metadata: DuoClientMetadata | undefined
+  private metadata: DshChatClientMetadata | undefined
   private refreshing: { revision: number; promise: Promise<AuthorizationState> } | undefined
 
   constructor(private readonly account: AccountReader, private readonly issueEpoch: () => string = randomUUID) {
@@ -52,7 +52,7 @@ export class AuthorizationAuthority {
     this.publish({ status: 'pending', accountId: null, epoch: this.issueEpoch(), error: null })
     if (this.metadata && !this.closed) void this.refresh(this.metadata).catch(() => undefined)
   }
-  private start(metadata: DuoClientMetadata): void {
+  private start(metadata: DshChatClientMetadata): void {
     this.metadata = { ...metadata }
     if (this.started || this.closed) return
     this.started = true
@@ -66,7 +66,7 @@ export class AuthorizationAuthority {
       if (!this.closed) this.unavailable('account-watch-ended')
     })().catch(() => { if (!this.closed) this.unavailable('account-watch-unavailable') })
   }
-  refresh(metadata: DuoClientMetadata): Promise<AuthorizationState> {
+  refresh(metadata: DshChatClientMetadata): Promise<AuthorizationState> {
     this.start(metadata)
     if (this.closed) return Promise.reject(new Error('Account observation is disposed.'))
     if (this.refreshing?.revision === this.revision) return this.refreshing.promise
@@ -76,7 +76,7 @@ export class AuthorizationAuthority {
     void promise.finally(() => { if (this.refreshing === current) this.refreshing = undefined }).catch(() => undefined)
     return promise
   }
-  private async refreshOnce(metadata: DuoClientMetadata): Promise<AuthorizationState> {
+  private async refreshOnce(metadata: DshChatClientMetadata): Promise<AuthorizationState> {
     const beforeRead = this.revision
     let view: Awaited<ReturnType<AccountReader['getState']>>
     try { view = await this.account.getState() }
@@ -111,7 +111,7 @@ export class AuthorizationAuthority {
     return this.getSnapshot()
   }
 
-  async *watch(metadata: DuoClientMetadata, signal: AbortSignal): AsyncIterable<AuthorizationState> {
+  async *watch(metadata: DshChatClientMetadata, signal: AbortSignal): AsyncIterable<AuthorizationState> {
     this.start(metadata)
     let dirty = true
     let wake: (() => void) | undefined

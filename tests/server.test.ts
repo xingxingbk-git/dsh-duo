@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { DuoUIBridge } from '../src/ui.js'
+import type { DshChatUIBridge } from '../src/ui.js'
 
 // Compile only our Service; load the real packages from the project so Cordis,
 // its registry, and the Gateway keep their published runtime identities.
@@ -18,20 +18,20 @@ const metadata = { version: '0.2.0-rc.2', locale: 'zh-CN', timezoneOffsetSeconds
 test('published Cordis and Typert Host/Client bind strict methods and withdraw them on disposal', async t => {
   const cache = path.join(process.cwd(), 'node_modules', '.cache')
   await mkdir(cache, { recursive: true })
-  const output = await mkdtemp(path.join(cache, 'dsh-duo-service-test-'))
+  const output = await mkdtemp(path.join(cache, 'dsh-chat-service-test-'))
   const artifact = path.join(output, 'server.mjs')
   t.after(async () => { await rm(output, { recursive: true, force: true }) })
   await build({
     absWorkingDir: process.cwd(), entryPoints: ['src/server.ts'], outfile: artifact,
     bundle: true, packages: 'external', format: 'esm', platform: 'node', target: 'es2022',
   })
-  const { DuoController } = await import(pathToFileURL(artifact).href)
+  const { DshChatController } = await import(pathToFileURL(artifact).href)
   const protocolArtifact = path.join(output, 'protocol.mjs')
   await build({
     absWorkingDir: process.cwd(), entryPoints: ['src/protocol.ts'], outfile: protocolArtifact,
     bundle: true, packages: 'external', format: 'esm', platform: 'node', target: 'es2022',
   })
-  const { DUO_REMOTE_CONTRIBUTION } = await import(pathToFileURL(protocolArtifact).href)
+  const { DSH_CHAT_REMOTE_CONTRIBUTION } = await import(pathToFileURL(protocolArtifact).href)
   // Published Client artifacts use DSH's lazyCJS loader. Run the actual
   // published factory with the same shared Cordis module supplied above.
   let ClientGateway: object | undefined
@@ -57,7 +57,7 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
   await registry
   const gateway = ctx.plugin(TypertGateway)
   await gateway
-  const controller = ctx.plugin(DuoController)
+  const controller = ctx.plugin(DshChatController)
   await controller
   let disposed = false
   t.after(async () => {
@@ -65,28 +65,28 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
     await gateway.dispose()
     await registry.dispose()
   })
-  assert.equal(ctx.typert.local.get('dshDuo/authorization').parameters[0].codec.mode, 'strict')
-  const authorized = await ctx.typertGateway.invoke({ namespace: 'dshDuo', method: 'authorization', args: { metadata } })
+  assert.equal(ctx.typert.local.get('dshChat/authorization').parameters[0].codec.mode, 'strict')
+  const authorized = await ctx.typertGateway.invoke({ namespace: 'dshChat', method: 'authorization', args: { metadata } })
   assert.equal(authorized.status, 'authorized')
   assert.equal(authorized.accountId, 'fixture-account')
   assert.ok(authorized.epoch)
   assert.equal('token' in authorized, false)
   ctx.emit('credentials/record-updated', 'fixture-unrelated/default')
-  assert.equal(ctx.dshDuo.authority.getSnapshot().epoch, authorized.epoch)
+  assert.equal(ctx.dshChat.authority.getSnapshot().epoch, authorized.epoch)
   ctx.emit('credentials/record-updated', 'deepseek-account-platform/default')
-  const replacing = ctx.dshDuo.authority.getSnapshot()
+  const replacing = ctx.dshChat.authority.getSnapshot()
   assert.equal(replacing.status, 'pending')
   assert.equal(replacing.accountId, null)
   assert.notEqual(replacing.epoch, authorized.epoch)
-  const reauthorized = await ctx.typertGateway.invoke({ namespace: 'dshDuo', method: 'authorization', args: { metadata } })
+  const reauthorized = await ctx.typertGateway.invoke({ namespace: 'dshChat', method: 'authorization', args: { metadata } })
   assert.equal(reauthorized.status, 'authorized')
   assert.notEqual(reauthorized.epoch, authorized.epoch)
 
   await assert.rejects(ctx.typertGateway.invoke({
-    namespace: 'dshDuo', method: 'authorization', args: { metadata: { ...metadata, cookie: 'fixture-only' } },
+    namespace: 'dshChat', method: 'authorization', args: { metadata: { ...metadata, cookie: 'fixture-only' } },
   }), (error: { code?: string }) => error.code === 'gateway/input-invalid')
   await assert.rejects(ctx.typertGateway.invoke({
-    namespace: 'dshDuo', method: 'authorization', args: { metadata }, signal: AbortSignal.abort(),
+    namespace: 'dshChat', method: 'authorization', args: { metadata }, signal: AbortSignal.abort(),
   }), (error: { code?: string }) => error.code === 'gateway/cancelled')
 
   // Only the Connection carrier is a local fixture: the Client Remote, its
@@ -115,27 +115,27 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
   const clientGateway = clientCtx.plugin(ClientGateway)
   await clientGateway
   t.after(async () => { await clientGateway.dispose(); await clientRegistry.dispose() })
-  const unmountClient = await clientCtx.remote.$mount(DUO_REMOTE_CONTRIBUTION)
+  const unmountClient = await clientCtx.remote.$mount(DSH_CHAT_REMOTE_CONTRIBUTION)
   t.after(unmountClient)
-  const clientAuthorization = await clientCtx.remote.dshDuo.authorization(metadata)
+  const clientAuthorization = await clientCtx.remote.dshChat.authorization(metadata)
   assert.equal(clientAuthorization.ok, true)
   assert.equal(clientAuthorization.value.accountId, authorized.accountId)
   // A root Context bypasses plugin dependency enforcement. Keep the failing
   // shape covered explicitly so the integration cannot accidentally miss it.
   const missingDependency = clientCtx.plugin({
     name: 'fixture-missing-namespace-dependency', inject: ['remote'],
-    apply: (child: typeof clientCtx) => child.remote.dshDuo.authorization(metadata),
+    apply: (child: typeof clientCtx) => child.remote.dshChat.authorization(metadata),
   })
-  await assert.rejects(Promise.resolve(missingDependency), /remote\.dshDuo.*without inject/)
+  await assert.rejects(Promise.resolve(missingDependency), /remote\.dshChat.*without inject/)
   await missingDependency.dispose()
-  const capturedMethod = clientCtx.remote.dshDuo.authorization
-  const clientStream = clientCtx.remote.dshDuo.watchAuthorization(metadata)
+  const capturedMethod = clientCtx.remote.dshChat.authorization
+  const clientStream = clientCtx.remote.dshChat.watchAuthorization(metadata)
   const clientIterator = clientStream[Symbol.asyncIterator]()
   assert.equal((await clientIterator.next()).value.status, 'authorized')
 
   const abort = new AbortController()
   const stream = await ctx.typertGateway.stream({
-    namespace: 'dshDuo', method: 'watchAuthorization', args: { metadata }, signal: abort.signal,
+    namespace: 'dshChat', method: 'watchAuthorization', args: { metadata }, signal: abort.signal,
   })
   const iterator = stream[Symbol.asyncIterator]()
   const opening = await iterator.next()
@@ -152,7 +152,7 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
   await iterator.return?.()
 
   await unmountClient()
-  assert.equal(clientCtx.get('remote.dshDuo'), undefined)
+  assert.equal(clientCtx.get('remote.dshChat'), undefined)
   const callsBeforeWithdrawal = carrierCalls
   assert.equal((await capturedMethod(metadata)).ok, false)
   assert.equal(carrierCalls, callsBeforeWithdrawal)
@@ -169,8 +169,8 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
       })
       plugin.onLoad({ filter: /.*/, namespace: 'fixture' }, (args: { path: string }) => ({
         contents: args.path === './ui.js'
-          ? 'export const DuoBrandName=()=>null, DuoBrandControl=()=>null, DuoChatNavigation=()=>null, DuoChatPanel=()=>null, DuoLeadingControls=()=>null, DuoChatSettings=()=>null;'
-          : 'export const DuoWebSurface=()=>null;', loader: 'js',
+          ? 'export const DshChatBrandName=()=>null, DshChatBrandControl=()=>null, DshChatChatNavigation=()=>null, DshChatChatPanel=()=>null, DshChatLeadingControls=()=>null, DshChatChatSettings=()=>null;'
+          : 'export const DshChatWebSurface=()=>null;', loader: 'js',
       }))
     } }],
   })
@@ -188,14 +188,14 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
     globalThis.addEventListener = priorAdd
     globalThis.removeEventListener = priorRemove
   })
-  let bridge!: DuoUIBridge
+  let bridge!: DshChatUIBridge
   let panel: string | null = 'plugins'
   const panelListeners = new Set<() => void>()
   const slotKeys = new Set<string>()
   class FixtureSlots extends Service {
     constructor(context: typeof clientCtx) { super(context, 'slots') }
     inject(_name: string, callback: () => unknown) { return this.ctx.effect(callback) }
-    register(options: { name: string; key?: string; id?: string; inject: () => { bridge: DuoUIBridge } }) {
+    register(options: { name: string; key?: string; id?: string; inject: () => { bridge: DshChatUIBridge } }) {
       const key = `${options.name}:${options.key ?? options.id ?? ''}`
       slotKeys.add(key)
       if (options.name === 'main') bridge = options.inject().bridge
@@ -239,15 +239,15 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
   assert.equal(panel, 'plugins')
   await production.dispose()
   assert.equal(slotKeys.size, 0)
-  assert.equal(clientCtx.get('remote.dshDuo'), undefined)
+  assert.equal(clientCtx.get('remote.dshChat'), undefined)
   await clientGateway.dispose()
   assert.equal(carrierStopped, true)
 
   await controller.dispose()
   disposed = true
-  assert.equal(ctx.typert.local.get('dshDuo/authorization'), undefined)
-  assert.equal(ctx.typert.local.get('dshDuo/watchAuthorization'), undefined)
+  assert.equal(ctx.typert.local.get('dshChat/authorization'), undefined)
+  assert.equal(ctx.typert.local.get('dshChat/watchAuthorization'), undefined)
   await assert.rejects(ctx.typertGateway.invoke({
-    namespace: 'dshDuo', method: 'authorization', args: { metadata },
+    namespace: 'dshChat', method: 'authorization', args: { metadata },
   }), (error: { code?: string }) => error.code === 'gateway/definition-unavailable')
 })

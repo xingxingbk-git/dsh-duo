@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { AuthorizationAuthority } from '../src/authorization.js'
 import type { AccountReader } from '../src/authorization.js'
-import { DUO_DESCRIPTORS, authorizationSchema, clientMetadataSchema } from '../src/protocol.js'
+import { DSH_CHAT_DESCRIPTORS, authorizationSchema, clientMetadataSchema } from '../src/protocol.js'
 
 const metadata = { version: '0.2.0-rc.2', locale: 'zh-CN', timezoneOffsetSeconds: 28_800 }
 type Profile = Awaited<ReturnType<AccountReader['getProfile']>>
@@ -152,8 +152,8 @@ test('authorization stream starts closed, publishes confirmation and logout, the
 })
 
 test('the public descriptor surface has only authorization and strict credential-free payloads', () => {
-  assert.deepEqual(DUO_DESCRIPTORS.map(item => item.method), ['authorization', 'watchAuthorization'])
-  assert.ok(DUO_DESCRIPTORS.every(item => item.parameters.every(parameter => parameter.codec.mode === 'strict')))
+  assert.deepEqual(DSH_CHAT_DESCRIPTORS.map(item => item.method), ['authorization', 'watchAuthorization'])
+  assert.ok(DSH_CHAT_DESCRIPTORS.every(item => item.parameters.every(parameter => parameter.codec.mode === 'strict')))
   assert.throws(() => clientMetadataSchema.parse({ ...metadata, token: 'fixture-only' }))
   assert.throws(() => authorizationSchema.parse({
     status: 'authorized', accountId: 'account-a', epoch: 'epoch-1', error: null, cookie: 'fixture-only',

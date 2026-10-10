@@ -90,7 +90,7 @@
 - [主进程 Guest 安全与存储策略](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/apps/desktop/src/browser-guests.ts)；[官方 Browser bootstrap 属性](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar-browser/src/client/electron/ElectronWebviewPresentation.ts)。固定隔离，内存分区，无原生下载/设备权限许可。
 - [main 只渲染当前键](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/AppFrame.tsx)；[Slots 定义](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/index.ts)。保活容器置于自己的 additive shell.overlay，以自己的 main ref 矩形定位。
 - [官方 Typert Gateway 调用/严格验证/取消](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/gateway/README.md)。本仓库 server.test 使用实际目标 Cordis/Typert/Gateway 在无网络的假账号服务上验证绑定，不冒充真实账号测试。
-- 2026-10-10授权pending核查：上述Gateway文档明确每个namespace是独立`remote.<namespace>`服务；Cordis4.0.4发布包`lib/types/registry.d.ts`的`Context.inject`定义说明按服务可用性加载/卸载回调。实际插件Context复现缺`remote.dshDuo`注入错误，root Context调用不触发此限制；生产Client回归已纳入server.test，没有live Inspect或凭据读取。
+- 2026-10-10授权pending核查：上述Gateway文档明确每个namespace是独立`remote.<namespace>`服务；Cordis4.0.4发布包`lib/types/registry.d.ts`的`Context.inject`定义说明按服务可用性加载/卸载回调。实际插件Context复现缺`remote.dshChat`注入错误，root Context调用不触发此限制；生产Client回归已纳入server.test，没有live Inspect或凭据读取。
 - 本机 app.asar 只读元数据/公开 bundled main/preload 核对确实为 rc.2，存在上述 Browser 桥；没有修改安装包或读取用户会话。
 - 官网公开无凭据 HTTP HEAD 返回 429，浏览器抓取也受限。这不是 iframe CSP/XFO 的可靠证据，不能声称 Web iframe 可用；Desktop 路线依赖其公开顶层 guest，实际官网登录及聊天仍待实测。
 
@@ -123,3 +123,8 @@ Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可�
 - [固定AppFrame](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/AppFrame.tsx)及同目录AppFrame.module.css：Mac折叠shell.leading挂载与官方frame-top-clearance、窗口坐标/z层次。本插件扣除公开顶部留白，避免guest遮住窗口控件。
 - [固定HeaderLeadingControls](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/HeaderLeadingControls.tsx)及同目录样式：公开图标/Tooltip、28px按钮/8px间距。CHAT替换该Slot的动作语义，HARNESS撤回；不复制私有feature组件。
 - 官网实际公开界面显示ds-button/ds-select、中文“系统设置”及“通用设置”，本机公开UI确认语言简体中文/主题深色。只记结构和验证结果，不保存个人标题/正文/凭据。直接公共GET为429，不用于判断guest布局；所有实机结论来自DSH实际guest。
+
+## W018名称与管理图标核查（2026-10-10）
+
+- [固定rc.2 Plugin display metadata](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/cookbook/adding-a-package.md#plugin-display-metadata)及[固定app-boot元数据说明](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/boot/app-boot/README.md#reading-plugin-display-metadata)：已读取正文，package.json需通过exports可见，icon为相对文件路径且包含在files中；支持自包含SVG、不超过256 KiB。manifest图标适配管理列表，不替换产品品牌。官方master另有./icon支持，本项目只使用rc.2已确认的顶层icon。
+- 新SSH地址git@github.com:xingxingbk-git/dsh-chat.git已通过git ls-remote读取HEAD=39cce8b7134937a58174037f38f20d0402f9db4a；仅证明地址可访问，不宣称本轮源码已推送。gh未登录，不要求用户另行授权，使用现有SSH完成只读验证。

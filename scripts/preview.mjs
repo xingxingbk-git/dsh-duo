@@ -45,7 +45,7 @@ const server = createServer((request, response) => {
   }
 })
 server.listen(4189, '127.0.0.1', () => {
-  console.log('dsh-duo development mock preview: http://127.0.0.1:4189')
+  console.log('dsh-chat development mock preview: http://127.0.0.1:4189')
   console.log('No official webpage or credentials are loaded. Restart this command after source changes.')
 })
 server.on('error', error => { console.error(error.message); process.exitCode = 1 })

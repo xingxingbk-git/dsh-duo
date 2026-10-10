@@ -1,7 +1,7 @@
 import { createElement, useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
-import { DuoStyles, useDuo, type DuoBridgeProps } from './ui.js'
+import { DshChatStyles, useDshChat, type DshChatBridgeProps } from './ui.js'
 import { emptyNavigation, parseWebsiteNavigation, websiteCommandScript, type WebsiteCommand } from './website-navigation.js'
 
 const WEBSITE_URL = 'https://chat.deepseek.com/'
@@ -31,10 +31,10 @@ export function getDesktopBrowserBridge(): DesktopBrowserBridge | undefined {
 }
 
 /** A persistent overlay occupant. Navigation back to Harness hides the native document, preserving drafts. */
-export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.overlay'> & DuoBridgeProps & {
+export function DshChatWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.overlay'> & DshChatBridgeProps & {
   readonly nativeBrowser?: DesktopBrowserBridge
 }) {
-  const state = useDuo(bridge)
+  const state = useDshChat(bridge)
   const [requestedGeneration, setRequestedGeneration] = useState<number | null>(null)
   const [reservation, setReservation] = useState<ReservationState | null>(null)
   const [recoveryRevision, setRecoveryRevision] = useState(0)
@@ -65,7 +65,7 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
     needsRecovery.current = false
     bridge.reportWebsiteState(generation, { loading: true, error: null })
     const release = (value: DesktopBrowserReservation) => {
-      void nativeBrowser.release(value.lease).catch(() => { console.warn('dsh-duo: website guest release failed') })
+      void nativeBrowser.release(value.lease).catch(() => { console.warn('dsh-chat: website guest release failed') })
     }
     void nativeBrowser.acquire(storageKey).then(value => {
       if (stopped) { release(value); return }
@@ -206,19 +206,19 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
   const visible = state.mode === 'chat' && state.modeEnabled && state.authorizationStatus === 'authorized' && rect !== null
   const activeReservation = reservation !== null && reservation.generation === state.authorizationGeneration
     && reservation.storageKey === state.accountStorageKey ? reservation : null
-  return <section className="dsh-duo-web-surface" aria-label="DeepSeek 官网网页" aria-hidden={!visible} style={{
+  return <section className="dsh-chat-web-surface" aria-label="DeepSeek 官网网页" aria-hidden={!visible} style={{
     display: visible ? 'flex' : 'none',
     left: rect?.left ?? 0,
     top: `calc(${rect?.top ?? 0}px + var(--dsh-frame-top-clearance, 0px))`,
     width: rect?.width ?? 0,
     height: `calc(${rect?.height ?? 0}px - var(--dsh-frame-top-clearance, 0px))`,
   }}>
-    <DuoStyles />
-    <div className="dsh-duo-web-content">
+    <DshChatStyles />
+    <div className="dsh-chat-web-content">
       {activeReservation !== null && createElement('webview', {
         key: activeReservation.native.lease,
         ref: attachGuest,
-        className: 'dsh-duo-webview',
+        className: 'dsh-chat-webview',
         style: { opacity: presentationReady ? 1 : 0 },
         name: activeReservation.native.lease,
         partition: activeReservation.native.partition,
@@ -227,10 +227,10 @@ export function DuoWebSurface({ bridge, nativeBrowser }: PropsRuntime<'shell.ove
         'data-sidebar-browser-frame': 'webview',
         'aria-label': 'DeepSeek 官网，登录、聊天和历史由网页提供',
       })}
-      {(nativeBrowser === undefined || state.webError !== null || activeReservation === null || !presentationReady) && <div className={`dsh-duo-web-status${state.webError !== null ? ' dsh-duo-web-status-error' : ''}`} role={state.webError !== null ? 'alert' : 'status'}>
+      {(nativeBrowser === undefined || state.webError !== null || activeReservation === null || !presentationReady) && <div className={`dsh-chat-web-status${state.webError !== null ? ' dsh-chat-web-status-error' : ''}`} role={state.webError !== null ? 'alert' : 'status'}>
         <strong>{nativeBrowser === undefined ? '当前环境无法内嵌网页' : state.webError !== null ? '网页暂时无法使用' : '正在打开 DeepSeek 官网'}</strong>
         <p>{state.webError || (nativeBrowser === undefined ? '需要提供官方浏览器能力的 DSH 桌面版。' : '网页登录后，由官网显示该账号的聊天和历史。')}</p>
-        {state.webError !== null && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled}>重试网页</button>}
+        {state.webError !== null && <button type="button" className="dsh-chat-text-button" onClick={() => bridge.reloadWebsite()} disabled={nativeBrowser === undefined || !state.modeEnabled}>重试网页</button>}
       </div>}
     </div>
   </section>

@@ -16,14 +16,14 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 ## Host：无凭据授权状态桥
 
-`src/index.ts` 加载 `DuoController`，依赖官方 `deepseekAccount`、`typert`。仅公开 `dshDuo.authorization` 和 `watchAuthorization`。
+`src/index.ts` 加载 `DshChatController`，依赖官方 `deepseekAccount`、`typert`。仅公开 `dshChat.authorization` 和 `watchAuthorization`。
 
 - 官方 `getState()/watch(signal)` 的 `credential-stored` 仅表示本地存在凭据，不代表服务端有效；要求 `getProfile(metadata)` 返回 ready 且稳定 `value.id` 后启用门槛。
 - 同账号连续有效刷新保留授权 epoch；普通网络错误保留既有官方有效确认，不伪造登出。首次无法确认时保持禁用。
 - 官方 `deepseek-account/signed-out`、`deepseek-account/session-expired` 即时关闭门槛。公开 `credentials/record-updated(key)` 只读 key，固定目标 key `deepseek-account-platform/default` 变化先发布 pending 并换 epoch，再安全重读账号资料；不读取 record 内容。
 - 异步资料和 Client unary 回包都有授权代次栅栏，防止登出/换账号后的迟到旧结果重开门槛。Client 首次授权仍保留 Harness，点击进入及窗口重新获得焦点时刷新官方状态。
 - `src/protocol.ts` 使用显式 strict InvocationDescriptor 和 Zod codecs，Host 注册 Typert contribution，Client `$mount`；不依赖 SRC 猜方法。流使用官方 `$stream` 监督重连与取消。
-- Client先`remote.$mount`再`ctx.inject(['remote', 'remote.dshDuo'], ...)`，所有unary/stream调用使用该子Context。仅注入`remote`不包含生成的独立namespace服务；直接从原插件Context调用会抛出`cannot get property "remote.dshDuo" without inject`。不能在挂载前把namespace设为外层必需依赖，造成启动相互等待。
+- Client先`remote.$mount`再`ctx.inject(['remote', 'remote.dshChat'], ...)`，所有unary/stream调用使用该子Context。仅注入`remote`不包含生成的独立namespace服务；直接从原插件Context调用会抛出`cannot get property "remote.dshChat" without inject`。不能在挂载前把namespace设为外层必需依赖，造成启动相互等待。
 - 刷新合并在途请求，35秒界面期限覆盖连接与调用，超时传递AbortSignal并隔离迟到回包。挂载失败可重试；初始失败从pending转unavailable，既有有效授权不因网络错误被撤销。HARNESS和CHAT均有错误反馈/刷新入口；插件卸载按依赖先dispose namespace消费者与stream，再撤回contribution。
 
 证据：deepseek-account/src/index.ts:39–93、types.ts:31–56；deepseek-account-platform/src/index.ts:17,147–150,296–343；credentials/src/types.ts:92–102；api/gateway/README.md。服务端撤销只在官方请求拒绝/事件确认时获知，插件不自行推断网络故障为撤销。
@@ -34,7 +34,7 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 
 `src/core/mode.ts` 集中管理授权门槛、mode 和原 `activePanelId`（包括 null）。Client 只调用公开 `layout.panelInfo.getSnapshot()/subscribe()` 和 `selectPanel()`；没有 Session/core 状态写入或盲目 close/open 右栏。
 
-- `main` 自有键 `dsh-duo.chat`。独立 main 按官方布局自然隐藏 Harness 右栏；退出先恢复原 panel，再 dispose Chat 覆盖项。
+- `main` 自有键 `dsh-chat.chat`。独立 main 按官方布局自然隐藏 Harness 右栏；退出先恢复原 panel，再 dispose Chat 覆盖项。
 - Harness侧栏/navigation原树保留；`sidebar.brand.name`仅替换装饰内容：官方DeepSeek字标（自有SVG视口裁掉HARNESS徽标）及自有锚点。实际按钮是官方additive `shell.overlay`的独立组件；不复制/包装未导出的SidebarRoot。W016新增用户批准的有限侧栏DOM适配，见下一条。
 - `src/sidebar-adapter.ts`从自己的品牌元素沿已核对rc.2祖先结构定位侧栏，先识别renderer的data-slot=sidebar.brand.name/display:contents包装，再校验aria-hidden品牌identity、data-window-drag行和直接子级新会话按钮；只加自有前缀的临时属性，以flex填满品牌间距、CHAT隐藏插件行/空导航区，捕获原新会话click并转交受门槛保护的官网new。官网未就绪/登录页时禁用该新建按钮；HARNESS恢复原disabled和点击行为，卸载移除属性/监听器并恢复原值。绑定归Client所有，品牌因折叠卸载时仍保持，展开重新绑定、Client卸载撤回。观察范围仅该root的childList；不改Session、私有服务或安装包。未知结构不适配，并在自有交互层提示顶部仍为HARNESS语义；不能称为官方新建接口。
 - 品牌owner的aria-hidden/外层New Session仍存在，交互层在该祖先外，提供按键与屏幕阅读器语义。rc.2品牌行24px且会裁剪，锚点为112×24px；完全可见才发布矩形，折叠/裁剪时隐藏，重新可见时恢复。底部和右下角旧入口已移除；正常授权无常驻刷新，故障时在顶部说明并重试。Mac实测通过，Web/Windows外层按钮及其他平台仍需实测。
@@ -80,7 +80,7 @@ W016登录核查：固定deepseek-account-platform默认Platform origin为platfo
 
 锁定 Cordis 4.0.4、官方 DSH 包 0.2.0-rc.2、React 18.3.1；TSX 支持，Host ESM、Client 单个 lazy-CJS factory、lib/types 声明。Client 仅共享固定 baseline 模块，第三方 Zod inline；feature 服务只通过 ctx/注入使用。build/check-artifact 校验精确 module requests、Host 依赖声明和单工厂结构，tarball 不含源码开发 harness、依赖或凭据。
 
-Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git 安装通过 `prepare` 运行本包自包含构建脚本；它依赖本包已声明的开发依赖，不需要旁边的 DSH monorepo 或临时提取文件。pnpm 的构建许可必须显式授予 dsh-duo，不能把 `--ignore-scripts` 用于源码 Git 安装；预构建 tarball 无需安装时构建。DSH bundled pnpm 11.7.0 必须在 profile 的 allowBuilds 批准准确 Git 身份，单独 `--allow-build=dsh-duo` 会失败。2026-10-10 实际 Git 安装曾因没有 prepare 而缺失两个 lib 入口，先前 tarball 检查没有覆盖这一问题，修复与复验见 handoff/worklog。
+Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git 安装通过 `prepare` 运行本包自包含构建脚本；它依赖本包已声明的开发依赖，不需要旁边的 DSH monorepo 或临时提取文件。pnpm 的构建许可必须显式授予 dsh-chat，不能把 `--ignore-scripts` 用于源码 Git 安装；预构建 tarball 无需安装时构建。DSH bundled pnpm 11.7.0 必须在 profile 的 allowBuilds 批准准确 Git 身份，单独 `--allow-build=dsh-chat` 会失败。2026-10-10 实际 Git 安装曾因没有 prepare 而缺失两个 lib 入口，先前 tarball 检查没有覆盖这一问题，修复与复验见 handoff/worklog。
 
 浏览器 Web profile 缺少 Desktop bridge 时保持 Harness 禁用，无未经验证的 iframe 回退。官网公开无凭据 HEAD 返回 429，不能据此断定 iframe 嵌入策略。
 
@@ -91,3 +91,9 @@ Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git
 - 卸载/授权变化时未发送网页草稿保留与官网流式取消；插件不能提取或调用这些内部能力。
 - 网站下载、设备权限、外部 OAuth 弹窗等受原生 Browser 固定策略限制；当前仅在同 guest 接受官方 Chat HTTPS popup。
 - 其他DSH版本、Web iframe、Windows/Linux品牌入口实测及完整屏幕阅读器验收。Mac顶部品牌位置已通过本轮实机检查；剩余项不因typecheck/build/mock通过自动变成支持。
+
+## W018统一名称与插件图标（2026-10-10）
+
+插件包、两端name导出、bundle patch及Typert贡献package统一为dsh-chat；Host/Client同步使用dshChat namespace，注册键和自有DOM标记同用dsh-chat前缀，类型为DshChat*。不保留旧名别名，不同时安装两份插件。包名变更涉及新的browser accountStorageKey，按正常网页登录恢复账号历史，不迁移旧guest凭据。
+
+插件管理图片使用package.json顶层icon=./assets/icon.svg，导出./package.json供官方readPluginMeta发现，并将assets/icon.svg加入files及source-only Git安装fixture。DSH rc.2固定源码明确支持manifest相对路径、自包含SVG和256 KiB上限；不用网页DOM或侧栏Slot替换管理页图标。当前仅静态资源/打包验证，不宣称已安装UI验收。

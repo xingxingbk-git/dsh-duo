@@ -50,9 +50,9 @@ export function attachSidebarAdapter(
     if (!originals.has(key)) originals.set(key, element.getAttribute(key))
     if (element.getAttribute(key) !== value) element.setAttribute(key, value)
   }
-  mark(identity, 'data-dsh-duo-brand-fill', 'identity')
-  mark(nameSeat, 'data-dsh-duo-brand-fill', 'name')
-  mark(newButton, 'data-dsh-duo-new-session', 'true')
+  mark(identity, 'data-dsh-chat-brand-fill', 'identity')
+  mark(nameSeat, 'data-dsh-chat-brand-fill', 'name')
+  mark(newButton, 'data-dsh-chat-new-session', 'true')
   const originallyDisabled = newButton.disabled
   let disposed = false
   const intercept = (event: Event) => {
@@ -67,14 +67,14 @@ export function attachSidebarAdapter(
   const sync = () => {
     if (disposed) return
     const state = read()
-    mark(root, 'data-dsh-duo-sidebar-mode', state.chat ? 'chat' : 'harness')
+    mark(root, 'data-dsh-chat-sidebar-mode', state.chat ? 'chat' : 'harness')
     newButton.disabled = state.chat ? !state.canCreate : originallyDisabled
     for (const nav of Array.from(root.children).filter(element => element.tagName === 'NAV')) {
       const buttons = Array.from(nav.children).filter(element => element.tagName === 'BUTTON')
       for (const button of buttons) {
-        if (pluginLabels.has(button.getAttribute('aria-label') ?? '')) mark(button, 'data-dsh-duo-plugin-row', 'true')
+        if (pluginLabels.has(button.getAttribute('aria-label') ?? '')) mark(button, 'data-dsh-chat-plugin-row', 'true')
       }
-      mark(nav, 'data-dsh-duo-only-plugins', buttons.length > 0
+      mark(nav, 'data-dsh-chat-only-plugins', buttons.length > 0
         && buttons.every(button => pluginLabels.has(button.getAttribute('aria-label') ?? '')) ? 'true' : 'false')
     }
   }

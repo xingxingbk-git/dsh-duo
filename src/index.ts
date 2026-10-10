@@ -1,9 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis'
-import { DuoController } from './server.js'
+import { DshChatController } from './server.js'
 
-export const name = 'dsh-duo'
+export const name = 'dsh-chat'
 
 /** Host-half entry. Browser UI is declared separately by the `dsh.client` manifest. */
 export const inject = ['deepseekAccount', 'typert']
 
-export function apply(ctx: Context): void { new DuoController(ctx) }
+export function apply(ctx: Context): void { new DshChatController(ctx) }

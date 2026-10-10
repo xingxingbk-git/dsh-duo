@@ -6,15 +6,15 @@ import type {} from '@deepseek-ai/dsh-api-gateway/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { CHAT_PANEL, ModeController } from './core/mode.js'
-import { authorizationSchema, DUO_REMOTE_CONTRIBUTION } from './protocol.js'
-import type { AuthorizationState, DuoClientMetadata } from './protocol.js'
-import { DuoBrandName, DuoBrandControl, DuoChatNavigation, DuoChatPanel, DuoLeadingControls, DuoChatSettings } from './ui.js'
-import type { DuoUIBridge, DuoViewState, DuoViewportRect } from './ui.js'
-import { DuoWebSurface } from './web-surface.js'
+import { authorizationSchema, DSH_CHAT_REMOTE_CONTRIBUTION } from './protocol.js'
+import type { AuthorizationState, DshChatClientMetadata } from './protocol.js'
+import { DshChatBrandName, DshChatBrandControl, DshChatChatNavigation, DshChatChatPanel, DshChatLeadingControls, DshChatChatSettings } from './ui.js'
+import type { DshChatUIBridge, DshChatViewState, DshChatViewportRect } from './ui.js'
+import { DshChatWebSurface } from './web-surface.js'
 import { emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from './website-navigation.js'
 import { createSidebarBinding } from './sidebar-adapter.js'
 
-export const name = 'dsh-duo'
+export const name = 'dsh-chat'
 export const inject = ['slots', 'layout', 'remote']
 const AUTHORIZATION_TIMEOUT_MS = 35_000
 
@@ -42,21 +42,21 @@ export function apply(ctx: Context): void {
   let webError: string | null = null
   let connectionError: string | null = null
   let navigationAttempt = 0
-  let viewport: DuoViewportRect | null = null
-  let brandAnchor: DuoViewportRect | null = null
+  let viewport: DshChatViewportRect | null = null
+  let brandAnchor: DshChatViewportRect | null = null
   let sidebarAdapted: boolean | null = null
   let websiteNavigation = emptyNavigation()
   let showWebsiteNavigation = false
   let navigationHandler: ((command: WebsiteCommand) => Promise<void>) | null = null
-  let bridge: DuoUIBridge
-  let cached: DuoViewState
+  let bridge: DshChatUIBridge
+  let cached: DshChatViewState
   let sidebar: ReturnType<typeof createSidebarBinding> | undefined
   const mode = new ModeController({
     readPanel: () => ctx.layout.panelInfo.getSnapshot().activePanelId,
     selectPanel: panel => { ctx.layout.selectPanel(panel as MainPanelId | null) },
     mountChatNavigation: () => {
-      const navigation = ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -100, inject: () => ({ bridge }) }, DuoChatNavigation))
-      const leading = ctx.slots.inject('shell.leading', () => ctx.slots.register({name:'shell.leading',priority:-100,inject:()=>({bridge})}, DuoLeadingControls))
+      const navigation = ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -100, inject: () => ({ bridge }) }, DshChatChatNavigation))
+      const leading = ctx.slots.inject('shell.leading', () => ctx.slots.register({name:'shell.leading',priority:-100,inject:()=>({bridge})}, DshChatLeadingControls))
       return () => { leading(); navigation() }
     },
     cancelAccount: () => { authorizationGeneration++; webLoading = false; webError = null; websiteNavigation = emptyNavigation(); navigationHandler = null; publish() },
@@ -78,7 +78,7 @@ export function apply(ctx: Context): void {
       error: state.error ?? connectionError ?? (state.authorization.error ? 'DSH 账号状态刷新遇到网络或服务问题。' : null),
       desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport, brandAnchor, sidebarAdapted,
       accountStorageKey: state.authorization.status === 'authorized' && state.authorization.accountId
-        ? `dsh-duo:website:${state.authorization.accountId}` : null,
+        ? `dsh-chat:website:${state.authorization.accountId}` : null,
       authorizationGeneration, websiteReloadRevision, websiteNavigation, showWebsiteNavigation,
     }
     sidebar?.sync()
@@ -94,7 +94,7 @@ export function apply(ctx: Context): void {
     mode.updateAuthorization(next)
     publish()
   }
-  const metadata: DuoClientMetadata = {
+  const metadata: DshChatClientMetadata = {
     version: '0.2.0-rc.2', locale: globalThis.navigator?.language ?? 'zh-CN',
     timezoneOffsetSeconds: -new Date().getTimezoneOffset() * 60,
   }
@@ -110,15 +110,15 @@ export function apply(ctx: Context): void {
     if (remoteContext || disposed) return
     if (!connecting) {
       connecting = Promise.resolve(ctx.effect(async () => {
-        const unmount = await ctx.remote.$mount(DUO_REMOTE_CONTRIBUTION)
+        const unmount = await ctx.remote.$mount(DSH_CHAT_REMOTE_CONTRIBUTION)
         if (disposed) { await unmount(); return () => {} }
         // $mount publishes a separate Cordis service. Inject it only after
         // mounting, and call its methods from this dependency-aware Context.
-        const consumer = ctx.inject(['remote', 'remote.dshDuo'], remoteCtx => {
+        const consumer = ctx.inject(['remote', 'remote.dshChat'], remoteCtx => {
           remoteCtx.effect(() => {
             remoteContext = remoteCtx
             const stream = remoteCtx.remote.$stream<AuthorizationState>({
-              name: 'dsh-duo.authorization', open: signal => remoteCtx.remote.dshDuo.watchAuthorization(metadata, signal),
+              name: 'dsh-chat.authorization', open: signal => remoteCtx.remote.dshChat.watchAuthorization(metadata, signal),
               ended: () => new Error('DSH account stream ended'),
               carrierFailed: () => { authorizationFailed('DSH 账号连接暂时中断，请刷新授权。') },
             })
@@ -135,12 +135,12 @@ export function apply(ctx: Context): void {
               if (remoteContext === remoteCtx) remoteContext = null
               return stream.dispose()
             }
-          }, 'dsh-duo account observation')
+          }, 'dsh-chat account observation')
         })
         try { await consumer }
         catch (error) { await consumer.dispose(); await unmount(); throw error }
         return async () => { await consumer.dispose(); await unmount() }
-      }, 'dsh-duo safe account remote')).then(() => {}).finally(() => { connecting = null })
+      }, 'dsh-chat safe account remote')).then(() => {}).finally(() => { connecting = null })
     }
     await connecting
   }
@@ -163,7 +163,7 @@ export function apply(ctx: Context): void {
           (async () => {
             await connectRemote()
             if (request.signal.aborted || !remoteContext) throw new Error('Account remote unavailable')
-            return remoteContext.remote.dshDuo.authorization(metadata, request.signal)
+            return remoteContext.remote.dshChat.authorization(metadata, request.signal)
           })(), deadline,
         ])
         if (disposed || request.signal.aborted || requestGeneration !== authorizationGeneration) return
@@ -241,12 +241,12 @@ export function apply(ctx: Context): void {
   publish()
   // The enclosing effect's final cleanup restores navigation before registered main keys disappear.
   ctx.effect(() => {
-    ctx.slots.inject('settings.section', () => ctx.slots.register({name:'settings.section',id:'dsh-duo.chat-settings',order:80,label:'CHAT设置',inject:()=>({bridge})}, DuoChatSettings))
-    ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: CHAT_PANEL, inject: () => ({ bridge }) }, DuoChatPanel))
-    ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -100, inject: () => ({ bridge }) }, DuoBrandName))
+    ctx.slots.inject('settings.section', () => ctx.slots.register({name:'settings.section',id:'dsh-chat.chat-settings',order:80,label:'CHAT设置',inject:()=>({bridge})}, DshChatChatSettings))
+    ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: CHAT_PANEL, inject: () => ({ bridge }) }, DshChatChatPanel))
+    ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -100, inject: () => ({ bridge }) }, DshChatBrandName))
     ctx.slots.inject('shell.overlay', () => [
-      ctx.slots.register({ name: 'shell.overlay', id: 'dsh-duo.brand-control', order: 100, inject: () => ({ bridge }) }, DuoBrandControl),
-      ctx.slots.register({ name: 'shell.overlay', id: 'dsh-duo.website', order: 90, inject: () => ({ bridge, nativeBrowser }) }, DuoWebSurface),
+      ctx.slots.register({ name: 'shell.overlay', id: 'dsh-chat.brand-control', order: 100, inject: () => ({ bridge }) }, DshChatBrandControl),
+      ctx.slots.register({ name: 'shell.overlay', id: 'dsh-chat.website', order: 90, inject: () => ({ bridge, nativeBrowser }) }, DshChatWebSurface),
     ])
     const stopMode = mode.subscribe(publish)
     const stopPanel = ctx.layout.panelInfo.subscribe(() => { mode.observePanel(ctx.layout.panelInfo.getSnapshot().activePanelId) })
@@ -258,5 +258,5 @@ export function apply(ctx: Context): void {
       mode.dispose(); sidebar?.dispose(); stopPanel(); stopMode(); disposed = true; lifetime.abort(); listeners.clear()
       globalThis.removeEventListener('focus', refreshOnFocus)
     }
-  }, 'dsh-duo reversible website UI')
+  }, 'dsh-chat reversible website UI')
 }

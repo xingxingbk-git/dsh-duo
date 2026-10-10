@@ -22,7 +22,7 @@ export interface NavigationPort {
   cancelAccount(accountId: string): void
 }
 
-export const CHAT_PANEL = 'dsh-duo.chat'
+export const CHAT_PANEL = 'dsh-chat.chat'
 
 /** Account validity and compatibility are checked for every entry, including direct navigation. */
 export class ModeController {

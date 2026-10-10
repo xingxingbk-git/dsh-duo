@@ -5,8 +5,8 @@ import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MainPanelId, PanelInfo, UsePanelInfo } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { CHAT_PANEL, ModeController, type ModeAuthorization } from '../src/core/mode.js'
-import { DuoBrandName, DuoBrandControl, DuoChatPanel, DuoChatNavigation, DuoChatSettings, DuoLeadingControls, useDuo, type DuoUIBridge, type DuoViewState, type DuoViewportRect } from '../src/ui.js'
-import { DuoWebSurface } from '../src/web-surface.js'
+import { DshChatBrandName, DshChatBrandControl, DshChatChatPanel, DshChatChatNavigation, DshChatChatSettings, DshChatLeadingControls, useDshChat, type DshChatUIBridge, type DshChatViewState, type DshChatViewportRect } from '../src/ui.js'
+import { DshChatWebSurface } from '../src/web-surface.js'
 import { adaptWebsiteNavigation, emptyNavigation, parseWebsiteNavigation, type WebsiteCommand } from '../src/website-navigation.js'
 import { createSidebarBinding } from '../src/sidebar-adapter.js'
 
@@ -25,14 +25,14 @@ let sidebarCollapsed = false
 let websiteReloadRevision = 0
 let webLoading = false
 let webError: string | null = null
-let viewport: DuoViewportRect | null = null
-let brandAnchor: DuoViewportRect | null = null
+let viewport: DshChatViewportRect | null = null
+let brandAnchor: DshChatViewportRect | null = null
 let sidebarAdapted: boolean | null = null
 let websiteNavigation = emptyNavigation()
 let showWebsiteNavigation = false
 let navigationHandler: ((command: WebsiteCommand) => Promise<void>) | null = null
 let fixtureWebsiteMode: 'ready' | 'empty' | 'sign-in' | 'unsupported' = 'ready'
-let cached: DuoViewState
+let cached: DshChatViewState
 let sidebar: ReturnType<typeof createSidebarBinding> | undefined
 let panelInfo: PanelInfo = { activePanelId: 'harness.original' as MainPanelId }
 
@@ -120,7 +120,7 @@ function sameAccountRefresh(): void {
   acceptAuthorization({ ...controller.getSnapshot().authorization })
 }
 
-const bridge: DuoUIBridge = {
+const bridge: DshChatUIBridge = {
   getSnapshot: () => cached,
   subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
   selectMode: mode => { controller.select(mode) },
@@ -219,11 +219,11 @@ function simulateGuest(element: HTMLElement): void {
     newButton.textContent = fixtureWebsiteMode === 'unsupported' ? 'Fixture layout changed' : '开启新对话'
     const result = adaptWebsiteNavigation(fixtureDoc, {origin:'https://chat.deepseek.com',pathname:fixtureWebsiteMode === 'sign-in' ? '/sign_in' : fixturePath}, command)
     history.forEach((link,index) => link.setAttribute('href',savedLinks[index]!))
-    element.setAttribute('data-preview-original-navigation',fixtureDoc.getElementById('dsh-duo-website-navigation-style') ? 'hidden' : 'visible')
+    element.setAttribute('data-preview-original-navigation',fixtureDoc.getElementById('dsh-chat-website-navigation-style') ? 'hidden' : 'visible')
     element.setAttribute('data-preview-path',fixturePath)
-    element.setAttribute('data-preview-track',fixtureDoc.querySelector('.fixture-track')!.hasAttribute('data-dsh-duo-navigation')?'hidden':'visible')
-    element.setAttribute('data-preview-content',String(fixtureDoc.querySelector('main')!.hasAttribute('data-dsh-duo-content')))
-    element.setAttribute('data-preview-chrome',String(fixtureDoc.querySelector('.fixture-chrome')!.hasAttribute('data-dsh-duo-web-chrome')))
+    element.setAttribute('data-preview-track',fixtureDoc.querySelector('.fixture-track')!.hasAttribute('data-dsh-chat-navigation')?'hidden':'visible')
+    element.setAttribute('data-preview-content',String(fixtureDoc.querySelector('main')!.hasAttribute('data-dsh-chat-content')))
+    element.setAttribute('data-preview-chrome',String(fixtureDoc.querySelector('.fixture-chrome')!.hasAttribute('data-dsh-chat-web-chrome')))
     element.setAttribute('data-preview-language',fixtureLanguage)
     element.setAttribute('data-preview-theme',fixtureTheme)
     element.setAttribute('data-preview-dialog',String(!!fixtureDoc.querySelector('[role=dialog]')))
@@ -232,7 +232,7 @@ function simulateGuest(element: HTMLElement): void {
     return result
   } })
   const style = document.createElement('style')
-  style.textContent = '.dsh-duo-webview:has([data-preview-guest]){display:flex;align-items:center;justify-content:center;background:#f8f9fc;color:#555d70;font-family:system-ui;text-align:center}[data-preview-guest] strong{font-size:20px;display:block;margin-bottom:12px}[data-preview-guest] p{font-size:13px;line-height:1.8;margin:0;max-width:430px}[data-preview-guest] code{font-size:11px;color:#8990a1}'
+  style.textContent = '.dsh-chat-webview:has([data-preview-guest]){display:flex;align-items:center;justify-content:center;background:#f8f9fc;color:#555d70;font-family:system-ui;text-align:center}[data-preview-guest] strong{font-size:20px;display:block;margin-bottom:12px}[data-preview-guest] p{font-size:13px;line-height:1.8;margin:0;max-width:430px}[data-preview-guest] code{font-size:11px;color:#8990a1}'
   const note = document.createElement('div')
   note.dataset.previewGuest = lease
   const title = document.createElement('strong')
@@ -276,13 +276,13 @@ const previewStyles = `
 
 function Preview() {
   const [settingsOpen,setSettingsOpen]=useState(false)
-  const state = useDuo(bridge)
+  const state = useDshChat(bridge)
   const chat = state.mode === 'chat'
   const counts = { acquired: ledger.filter(item => item.action === 'acquire').length, released: ledger.filter(item => item.action === 'release').length }
   return <div className="preview-page">
     <style>{previewStyles}</style>
     <header className="preview-header">
-      <h1>dsh-duo 开发预览 · 模拟环境，不是 DSH 实机验收</h1>
+      <h1>dsh-chat 开发预览 · 模拟环境，不是 DSH 实机验收</h1>
       <p>复用插件实际 UI 和 ModeController；账号、布局和网页容器均为模拟，不连接 DeepSeek 官网。顶部品牌控件使用实际定位组件。</p>
       <div className="preview-actions" aria-label="开发模拟控制"><button onClick={()=>setSettingsOpen(true)}>CHAT设置</button>
         <button type="button" onClick={() => acceptAuthorization({ status: 'pending', accountId: null, epoch: `preview-${++epochNumber}`, error: null })}>模拟授权待确认</button>
@@ -304,11 +304,11 @@ function Preview() {
         <button type="button" onClick={() => layout.toggleSidebar()} aria-label="切换模拟侧栏折叠">☰</button>
         {/* Match rc.2's clipped 24px brand identity so visibility regressions are observable. */}
         <div data-window-drag style={{ display: 'flex', alignItems: 'center', height: 24, marginTop: 18, marginBottom: 34, overflow: 'hidden', flexShrink:0 }}>
-          <span style={{ display:'inline-flex', flex:1, minWidth:0 }}><span aria-hidden="true" style={{ display:'inline-flex', alignItems:'center', gap:8, height:24, minWidth:0 }}><span><FishLogo size={24} /></span><span style={{display:'inline-flex', minWidth:0}}><div data-slot="sidebar.brand.name" style={{display:'contents'}}>{!sidebarCollapsed && <DuoBrandName {...slotProps} bridge={bridge} />}</div></span></span></span>
+          <span style={{ display:'inline-flex', flex:1, minWidth:0 }}><span aria-hidden="true" style={{ display:'inline-flex', alignItems:'center', gap:8, height:24, minWidth:0 }}><span><FishLogo size={24} /></span><span style={{display:'inline-flex', minWidth:0}}><div data-slot="sidebar.brand.name" style={{display:'contents'}}>{!sidebarCollapsed && <DshChatBrandName {...slotProps} bridge={bridge} />}</div></span></span></span>
         </div>
         <button type="button" aria-label="新建会话" onClick={() => { record({action:'harness-new-session'}); layout.selectPanel('harness.original') }}>新会话</button>
         <nav aria-label="全局面板"><button type="button" aria-label="插件" onClick={() => layout.selectPanel('plugins')}>插件</button></nav>
-        <div style={{flex:1,minHeight:0,marginTop:20}}>{sidebarMounted ? <DuoChatNavigation {...slotProps} bridge={bridge} wide={!sidebarCollapsed} expandSidebar={() => layout.toggleSidebar()} /> : <nav aria-label="原 Harness 模拟导航"><strong>原工作区</strong><span>原会话与文件面板</span></nav>}</div>
+        <div style={{flex:1,minHeight:0,marginTop:20}}>{sidebarMounted ? <DshChatChatNavigation {...slotProps} bridge={bridge} wide={!sidebarCollapsed} expandSidebar={() => layout.toggleSidebar()} /> : <nav aria-label="原 Harness 模拟导航"><strong>原工作区</strong><span>原会话与文件面板</span></nav>}</div>
         {!sidebarCollapsed && <div className="preview-ledger" aria-label="网页容器生命周期">
           <strong>状态：{state.mode.toUpperCase()} / {state.authorizationStatus}</strong><br />
           <span>授权代次：{state.authorizationGeneration}</span><br />
@@ -329,18 +329,18 @@ function Preview() {
           </section>
           <aside className="preview-rightbar" aria-label="原 Harness 模拟右栏"><h3>原右栏状态</h3><dl><dt>是否展开</dt><dd>展开</dd><dt>宽度</dt><dd>240 px</dd><dt>已选标签</dt><dd>原文件预览</dd><dt>展示模式</dt><dd>普通</dd></dl><p>CHAT 隐藏该模拟栏，HARNESS 恢复相同状态。</p></aside>
         </div>
-        {chat && <DuoChatPanel {...slotProps} bridge={bridge} />}
+        {chat && <DshChatChatPanel {...slotProps} bridge={bridge} />}
       </main>
     </div>
-    {chat && sidebarCollapsed && <div className="preview-leading"><DuoLeadingControls {...slotProps} bridge={bridge}/></div>}
-    {settingsOpen && <div className="preview-settings" role="dialog" aria-label="模拟DSH设置"><button onClick={()=>setSettingsOpen(false)}>关闭设置</button><DuoChatSettings {...slotProps} bridge={bridge} close={()=>setSettingsOpen(false)}/></div>}
-    <DuoBrandControl {...slotProps} bridge={bridge} />
-    <DuoWebSurface {...slotProps} bridge={bridge} nativeBrowser={nativeBrowser} />
+    {chat && sidebarCollapsed && <div className="preview-leading"><DshChatLeadingControls {...slotProps} bridge={bridge}/></div>}
+    {settingsOpen && <div className="preview-settings" role="dialog" aria-label="模拟DSH设置"><button onClick={()=>setSettingsOpen(false)}>关闭设置</button><DshChatChatSettings {...slotProps} bridge={bridge} close={()=>setSettingsOpen(false)}/></div>}
+    <DshChatBrandControl {...slotProps} bridge={bridge} />
+    <DshChatWebSurface {...slotProps} bridge={bridge} nativeBrowser={nativeBrowser} />
   </div>
 }
 
 /** Public, credential-free inspection hook for development browser assertions. */
-Object.assign(window, { __DUO_PREVIEW__: {
+Object.assign(window, { __DSH_CHAT_PREVIEW__: {
   getSnapshot: () => ({ ...cached, activePanelId: panelInfo.activePanelId, sidebarMounted, sidebarCollapsed }),
   getLedger: () => ledger.map(entry => ({ ...entry })),
   getActiveLeases: () => [...activeLeases],

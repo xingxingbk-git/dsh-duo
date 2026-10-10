@@ -4,29 +4,29 @@ import type {} from '@deepseek-ai/dsh-deepseek-account'
 import type {} from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-typert-registry'
 import { AuthorizationAuthority } from './authorization.js'
-import { DUO_HOST_CONTRIBUTION, clientMetadataSchema } from './protocol.js'
-import type { AuthorizationState, DuoClientMetadata } from './protocol.js'
+import { DSH_CHAT_HOST_CONTRIBUTION, clientMetadataSchema } from './protocol.js'
+import type { AuthorizationState, DshChatClientMetadata } from './protocol.js'
 
 /** Fixed official rc.2 ownership key; the event exposes only this key, never its record. */
 const ACCOUNT_RECORD_KEY = 'deepseek-account-platform/default'
 
 /** Safe DSH account bridge. The actual chat website is not read or controlled by this Service. */
-export class DuoController extends TypertRemoteService {
+export class DshChatController extends TypertRemoteService {
   static inject = ['deepseekAccount', 'typert']
   readonly authority: AuthorizationAuthority
   constructor(ctx: Context) {
-    super(ctx, 'dshDuo')
+    super(ctx, 'dshChat')
     this.authority = new AuthorizationAuthority(ctx.deepseekAccount)
-    ctx.typert.register(DUO_HOST_CONTRIBUTION)
+    ctx.typert.register(DSH_CHAT_HOST_CONTRIBUTION)
     ctx.on('deepseek-account/signed-out', () => { this.authority.invalidate() })
     ctx.on('deepseek-account/session-expired', () => { this.authority.invalidate() })
     ctx.on('credentials/record-updated', key => {
       if (String(key) === ACCOUNT_RECORD_KEY) this.authority.grantChanged()
     })
-    ctx.effect(() => () => { this.authority.dispose() }, 'dsh-duo safe account observation lifetime')
+    ctx.effect(() => () => { this.authority.dispose() }, 'dsh-chat safe account observation lifetime')
   }
   @Remote
-  async authorization(metadata: DuoClientMetadata, signal: AbortSignal): Promise<AuthorizationState> {
+  async authorization(metadata: DshChatClientMetadata, signal: AbortSignal): Promise<AuthorizationState> {
     signal.throwIfAborted()
     try {
       const state = await this.authority.refresh(clientMetadataSchema.parse(metadata))
@@ -37,9 +37,9 @@ export class DuoController extends TypertRemoteService {
     }
   }
   @Remote({ mode: 'stream' })
-  async *watchAuthorization(metadata: DuoClientMetadata, signal: AbortSignal): AsyncIterable<AuthorizationState> {
+  async *watchAuthorization(metadata: DshChatClientMetadata, signal: AbortSignal): AsyncIterable<AuthorizationState> {
     yield* this.authority.watch(clientMetadataSchema.parse(metadata), signal)
   }
 }
 
-declare module '@deepseek-ai/cordis' { interface Context { dshDuo: DuoController } }
+declare module '@deepseek-ai/cordis' { interface Context { dshChat: DshChatController } }

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { Context } from '@deepseek-ai/cordis'
 import { apply } from '../src/client.js'
-import type { DuoUIBridge } from '../src/ui.js'
+import type { DshChatUIBridge } from '../src/ui.js'
 import type { AuthorizationState } from '../src/protocol.js'
 import { CHAT_PANEL } from '../src/core/mode.js'
 
@@ -24,7 +24,7 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
   let collector = rootEffects
   const setup: Promise<unknown>[] = []
   const order: string[] = []
-  const registrations = new Map<string, { inject: () => { bridge: DuoUIBridge } }>()
+  const registrations = new Map<string, { inject: () => { bridge: DshChatUIBridge } }>()
   const panelListeners = new Set<() => void>()
   let panel = originalPanel
   const requests: ReturnType<typeof deferred<{ ok: true; value: AuthorizationState }>>[] = []
@@ -81,13 +81,13 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
   const ctx = {
     effect,
     inject: (dependencies: string[], callback: (ctx: unknown) => unknown) => {
-      assert.deepEqual(dependencies, ['remote', 'remote.dshDuo'])
+      assert.deepEqual(dependencies, ['remote', 'remote.dshChat'])
       const dispose = effect(() => callback(ctx))
       return { dispose, then: (fulfilled: () => unknown) => Promise.resolve().then(fulfilled) }
     },
     slots: {
       inject: (_name: string, callback: () => unknown) => effect(callback),
-      register: (options: { name: string; key?: string; id?: string; inject: () => { bridge: DuoUIBridge } }) => {
+      register: (options: { name: string; key?: string; id?: string; inject: () => { bridge: DshChatUIBridge } }) => {
         const key = `${options.name}:${options.key ?? options.id ?? ''}`
         registrations.set(key, options)
         return effect(() => () => { registrations.delete(key); order.push(`unregister:${key}`) })
@@ -108,7 +108,7 @@ function harness(originalPanel: string | null = 'plugins', failMount = false) {
         return () => { order.push('remote:unmount') }
       },
       $stream: () => stream,
-      dshDuo: {
+      dshChat: {
         authorization: () => { const value = deferred<{ ok: true; value: AuthorizationState }>(); requests.push(value); return value.promise },
       },
     },
@@ -254,7 +254,7 @@ test('an account change while entering Chat cannot auto-enter the replacement ac
     h.emit(authorized('B', 'grant-b')); await flush()
     h.requests[1].resolve({ ok: true, value: authorized() }); await flush()
     assert.equal(h.bridge.getSnapshot().mode, 'harness')
-    assert.equal(h.bridge.getSnapshot().accountStorageKey, 'dsh-duo:website:B')
+    assert.equal(h.bridge.getSnapshot().accountStorageKey, 'dsh-chat:website:B')
     assert.equal(h.panel(), 'plugins')
   } finally { await h.dispose() }
 })

@@ -1,3 +1,4 @@
+<!-- W018命名说明：按用户要求，历史记录的名称/路径示例统一为当前名称dsh-chat；历史版本、提交及hash仍对应原轮次。当前事实以最新W018记录和handoff为准。 -->
 # 项目决策与工作记录
 
 本文件记录全项目的关键工作历史及理由，包含需求、调研、设计、实现、验证、失败尝试、协作和 Git 交付。当前状态以 [handoff.md](handoff.md) 为准，详细需求/架构不在此重复全文。只追加有实质影响的阶段摘要，不复制完整聊天或敏感数据。
@@ -32,10 +33,10 @@
 
 ## W004 · 2026-10-09 · T13 · 首次仓库同步
 
-- 用户授权连接 `git@github.com:xingxingbk-git/dsh-duo.git` 并推送项目。SSH 查询确认当时远端无 refs，初始化本地 main、添加 origin，使用既有 Git 身份。
+- 用户授权连接 `git@github.com:xingxingbk-git/dsh-chat.git` 并推送项目。SSH 查询确认当时远端无 refs，初始化本地 main、添加 origin，使用既有 Git 身份。
 - 文件：首次提交 15 个项目文件，包含骨架、全部方案和接力文档；未上传依赖、构建产物、安装包、临时提取副本或凭据。
 - 执行限制：普通沙箱不允许写 `.git`，按用户已授权范围经工具权限提升完成 Git 操作；这不是产品或仓库故障，不需要修改安装包/权限作为后续实现步骤。
-- 交付：`git push -u origin main` 成功；本地 HEAD、远端 main 和远端默认 HEAD 同为 [`bb182ff`](https://github.com/xingxingbk-git/dsh-duo/commit/bb182ff70177c14da9b5f95b6ea9ea9f7b0180df)，工作区干净。
+- 交付：`git push -u origin main` 成功；本地 HEAD、远端 main 和远端默认 HEAD 同为 [`bb182ff`](https://github.com/xingxingbk-git/dsh-chat/commit/bb182ff70177c14da9b5f95b6ea9ea9f7b0180df)，工作区干净。
 - 验证：文档一致性、相对链接、JSON、暂存差异检查通过；没有执行功能构建/测试。
 
 ## W005 · 2026-10-09 · T13 · 全项目上下文同步机制
@@ -69,7 +70,7 @@
 
 ## W008 · 2026-10-09 · T04–T10/T12/T13 · 插件实现开工
 
-- 触发：用户要求阅读项目文档并制作 dsh-duo。已重新读取全部当前需求、架构、路线、来源和交接记录；本轮基线 main `93702ea`，fetch 成功，工作区开工干净。
+- 触发：用户要求阅读项目文档并制作 dsh-chat。已重新读取全部当前需求、架构、路线、来源和交接记录；本轮基线 main `93702ea`，fetch 成功，工作区开工干净。
 - 分工：主 Agent 集成 src/文档及验证；授权与 UI 子 Agent 只读核对固定官方源码；构建子 Agent 仅修改 package/tsconfig/build/lockfile。未授权提交/推送，保留本地可审查成果。
 - 当前环境：DSH `0.2.0-rc.2`（本机 Info.plist），Node.js `v24.14.1`、pnpm `10.33.2`；无 live Cordis Inspect 工具。继续静态官方契约核查，不伪造 live 结果。
 - 阶段状态：本轮候选版实现与安全验证已结束，最终产物、验证结果、未完成项和下一步见 W010 与 handoff；真实Desktop验收尚未完成。
@@ -89,8 +90,8 @@
 - 完成：Host无凭据授权桥、strict Typert协议、统一ModeController、CHAT临时可达入口/自己的侧栏与main、官方Desktop Browser lease和真实官网容器。手动切换保活，DSH登出/授权变化先恢复，再释放旧guest；显式故障重试只替换失败容器。原独立模型聊天和本地记录已删除。
 - 文件：src/index/client/authorization/protocol/server/core/mode/ui/styles/web-surface；package/tsconfig/pnpm-lock及build/client-contract/check-artifact/test/preview脚本；tests、开发preview；README及Agent上下文主文档。授权、UI、构建三个子Agent分工完成后交还协调者；共享文档由协调者整合。
 - 构建：冻结离线安装、pnpm typecheck/build/test/package:plugin、git diff --check均通过；19/19测试，真实Cordis/Registry/Host Gateway/Client lazyCJS配合本地carrier及安全账户fixture，验证协议挂载/严格校验/unary/stream/卸载。模拟或本地carrier不是DSH GUI、真实账户或官网验收。
-- 安装包：artifacts/dsh-duo-0.1.0.tgz，14个白名单文件，SHA256 2c4d8b27b297e5448d9665eb09d90acd833d6544475996ead9643fc2d3f08f26；Client只请求React、JSX runtime、官方ui-primitives三个baseline，Zod内联，无第二份Cordis/React实例。
-- 真实Host安装检查：独立/tmp的web profile安装最终hash命名tgz，核对安装文件hash；官方CLI运行时临时只读诊断确认两个dshDuo方法真实挂载，不调用账号。卸载后bundle/依赖撤回且配置与安装前逐字一致，原Host重启无loader错误。匿名HTTP401属官方门槛。专用验证进程停止，端口释放，含临时传输token的原始日志清理；用户真实profile未触碰。
+- 安装包：artifacts/dsh-chat-0.1.0.tgz，14个白名单文件，SHA256 2c4d8b27b297e5448d9665eb09d90acd833d6544475996ead9643fc2d3f08f26；Client只请求React、JSX runtime、官方ui-primitives三个baseline，Zod内联，无第二份Cordis/React实例。
+- 真实Host安装检查：独立/tmp的web profile安装最终hash命名tgz，核对安装文件hash；官方CLI运行时临时只读诊断确认两个dshChat方法真实挂载，不调用账号。卸载后bundle/依赖撤回且配置与安装前逐字一致，原Host重启无loader错误。匿名HTTP401属官方门槛。专用验证进程停止，端口释放，含临时传输token的原始日志清理；用户真实profile未触碰。
 - 浏览器模拟：pnpm preview复用实际组件和ModeController，native guest/授权/layout是fixture且CSP禁止访问官网。Playwright通过授权禁用/首次保持Harness、往返同lease与Harness草稿、同账号刷新、resize/折叠、进程故障显式重试、登出释放、换账号新分区；0 errors/0 warnings。截图为明确标记“未加载官网”的模拟界面，不能证明真实网页数据。
 - 失败尝试与修复：Playwright首次因沙箱DNS失败，授权工具网络后CLI可用；折叠模拟最初超时，核对官方AppFrame固定grid列后发现preview缺owner约束，仅补开发wrapper并重测通过，生产无改动。官方Client直接Node ESM导入因window不存在失败，改按正式lazyCJS契约测。pnpm同路径同版本tgz --force仍报Already up to date且装着旧骨架，改唯一hash路径并核对hash才计成功；remove不接受--ignore-scripts，专用profile改--config.ignore-scripts=true完成。
 - 限制与交接：没有真实Desktop官网登录、消息、验证码/上传、两端历史、原生Session/右栏和Desktop禁用/卸载证据。DSH登录与网页登录独立，内部网页退出不可观察；草稿提取/网页生成取消和原生历史重绘缺公开能力。下一步由用户本人完成网页登录并用非敏感对话验收。此阶段源码、任务与上下文仅本地保存，未提交/未推送，不声称跨设备已同步。
@@ -98,12 +99,12 @@
 
 ## W011 · 2026-10-10 · T05/T12/T13 · Git 安装导入失败修复
 
-- 触发：用户从 GitHub 仓库 URL 安装，DSH 0.2.0-rc.2 启用提示 dsh-duo failed to import。main基线e1a19e2，开工工作区干净，fetch后0 ahead/0 behind；单Agent负责构建/安装和上下文，无并行文件所有者。
-- 根因证据：本机desktop profile依赖为github:xingxingbk-git/dsh-duo；实际安装lib/index.js和lib/client.js都不存在。仓库不提交lib，package缺prepare。官方打包文档明确描述这种Git源码安装失败；上一阶段只验证tarball，未覆盖Git路径。e1a19e2已推送，W010当时“仅本地”不是当前同步状态。
+- 触发：用户从 GitHub 仓库 URL 安装，DSH 0.2.0-rc.2 启用提示 dsh-chat failed to import。main基线e1a19e2，开工工作区干净，fetch后0 ahead/0 behind；单Agent负责构建/安装和上下文，无并行文件所有者。
+- 根因证据：本机desktop profile依赖为github:xingxingbk-git/dsh-chat；实际安装lib/index.js和lib/client.js都不存在。仓库不提交lib，package缺prepare。官方打包文档明确描述这种Git源码安装失败；上一阶段只验证tarball，未覆盖Git路径。e1a19e2已推送，W010当时“仅本地”不是当前同步状态。
 - 修复：package增加自包含prepare和check:git-install；独立临时Git源码fixture排除lib/依赖/用户数据，验证实际包管理器安装、Host import和Client注册；README区分Git构建许可与预构建tarball，验收/架构/路线/资料/AGENTS与handoff同步；依赖缓存排除，未改聊天源码或账号策略。
 - 环境：当前Mac DSH 0.2.0-rc.2（Info.plist/CLI），Node v24.15.0，项目pnpm10.33.2，DSH bundled pnpm11.7.0；开发依赖Cordis4.0.4/React18.3.1；无live Inspect，不读取密码/Cookie/token或会话内容。
 - 验证：冻结安装、typecheck、19/19测试、构建/pack及artifact契约通过。pnpm10的Git安装通过；pnpm11仅--allow-build首次失败，按其打印的准确Git身份配置fixture allowBuilds后通过。把Git身份许可直接套到pnpm10会报INVALID_VERSION_UNION，检查脚本已按实际包管理器主版本分开配置两种许可。没有全局放开依赖脚本，也未改变用户profile的脚本许可。
-- 当前设备修复：官方CLI在desktop profile用hash命名tarball替换损坏的dsh-duo依赖（--ignore-scripts），两个安装入口hash匹配构建；原UI关闭/重新启用插件后，AX/截图显示“运行中”和两个模式控件。界面处于授权pending，未进入官网或发送消息；启用成功不代表聊天、授权或网页历史已验收。
+- 当前设备修复：官方CLI在desktop profile用hash命名tarball替换损坏的dsh-chat依赖（--ignore-scripts），两个安装入口hash匹配构建；原UI关闭/重新启用插件后，AX/截图显示“运行中”和两个模式控件。界面处于授权pending，未进入官网或发送消息；启用成功不代表聊天、授权或网页历史已验收。
 - 交付/下一步：依本会话既有授权提交推送代码和上下文，远端状态以实际Git核对为准；安装包和构建产物不提交。下一步由用户完成正常授权/网页登录，真实官网、右栏/Session与卸载恢复仍需验证。测试fixture自动清理，没有驻留新增服务。
 
 ## W012 · 2026-10-10 · T04/T07/T12/T13 · 授权一直 pending 与本地验收流程
@@ -112,8 +113,8 @@
 - 开工：main基线f6cf716，工作区干净、fetch没有新提交；单Agent排查实际Client/Host调用、Cordis插件Context依赖和失败反馈。当前修复/验证已结束，交还用户验收，没有其他Agent占用文件。
 - 用户新决策：后续修改先本地验收，由用户自行通过Codex右上角手动提交/推送；Agent不自动stage/commit/push，除非另行收到本轮明确Git指令。此前持续推送约定由本条替代，已写入AGENTS，不自动撤销历史提交。
 - 当前限制：无live Inspect，依据目标官方源码和实际发布的Cordis/Gateway包复现；不读取密码/Cookie/token或个人对话。修复、实测与失败尝试结束时补充本条和handoff。
-- 根因已复现：Client挂载贡献后从只inject remote的插件Context读取独立remote.dshDuo，被Cordis拒绝；旧测试调用root Context/宽松fake，漏掉依赖限制。初始错误只保存在connectionError但未改变pending且HARNESS未展示错误/刷新入口，导致永久等待。是否缺typert的猜测被实际挂载成功反证，没有加入无依据依赖。
-- 实现与回归：挂载后动态注入remote.dshDuo，从子Context调用unary/stream；挂载失败可重试，刷新合并并加35秒期限和AbortSignal，初始错误收敛unavailable；普通网络故障不撤销已有有效授权。HARNESS/CHAT显示错误和刷新入口。23/23测试通过，真实Cordis/Gateway加载生产Client，含授权/登出/卸载；纯Client增加失败、重挂载、超时迟到、已授权网络故障测试。
+- 根因已复现：Client挂载贡献后从只inject remote的插件Context读取独立remote.dshChat，被Cordis拒绝；旧测试调用root Context/宽松fake，漏掉依赖限制。初始错误只保存在connectionError但未改变pending且HARNESS未展示错误/刷新入口，导致永久等待。是否缺typert的猜测被实际挂载成功反证，没有加入无依据依赖。
+- 实现与回归：挂载后动态注入remote.dshChat，从子Context调用unary/stream；挂载失败可重试，刷新合并并加35秒期限和AbortSignal，初始错误收敛unavailable；普通网络故障不撤销已有有效授权。HARNESS/CHAT显示错误和刷新入口。23/23测试通过，真实Cordis/Gateway加载生产Client，含授权/登出/卸载；纯Client增加失败、重挂载、超时迟到、已授权网络故障测试。
 - 验证调整：首次typecheck要求异步effect每个分支返回cleanup，已修正；测试fake async effect需观察失败Promise，真实Slots fixture改为Cordis Service以拥有正确Context生命周期。最终typecheck/test通过，不能把这些fixture修正当作DSH实测。
 - 当前设备实测：pnpm package:plugin和单lazy工厂/3共享baseline检查通过；14文件tarball SHA256 20bac1a168cdf9587cefecb4d4bc219ee687377f7e082379699cea65372abe19，经官方CLI更新desktop依赖（ignore-scripts），两个安装入口hash匹配。DSH自动重载后授权确认完成，CHAT按钮可用、HARNESS保持选中、pending消失；刷新结果保持；禁用控件撤回、重新启用再次正常确认，AX/截图直接验证。CLI peer泛化warning未妨碍真实加载。未退出账号、加载官网、发送消息或改其他插件。
 - 交接：实际文件/版本/根因/验证分层和下一步已同步handoff；完整官网、历史、CHAT中的退出/卸载、右栏/Session矩阵仍待用户验收。本轮代码与文档均未提交/推送，新设备尚不能取得这份上下文；用户自行验收和手动Git交付。
@@ -130,7 +131,7 @@
 - 浏览器模拟：生产组件+ModeController，官网被CSP禁止；24px裁剪顶部可见，交互层无aria-hidden/外层button祖先；pending/失败disabled、顶部重试、Enter切CHAT、退出恢复并disabled通过，console 0 warnings/0 errors。账号/layout/lease仍fixture。
 - Mac实测：更新本地唯一hash包后自动重载，顶部白底Harness可见，底部/右下角旧控件消失。侧栏折叠隐藏展开恢复；鼠标与Shift-Tab/Enter切CHAT，官网现有登录状态与历史导航可见；未发送或存储私人历史信息。返回原会话及已关闭右栏；插件页禁用恢复原徽标，重新启用授权收敛且Harness选中。首次登录/验证码/发送/跨端历史、其他平台及完整恢复矩阵仍未验收。
 - 上下文：AGENTS/requirements/architecture/roadmap/references/handoff已更新当前阶段，W012用户手动提交状态与当前35da7f0基线已纠正，旧长验证记录以worklog历史引用保留；README仅调整用户功能与真实能力边界。无进行中分工，完成本阶段交还用户验收，不自动Git交付。
-- 最终验证：pnpm typecheck、test（23/23）、package:plugin通过；单lazy工厂/3共享baseline，14文件tarball。最终SHA256 `77a175008dd8a25151fd5abc4f934614f80bde2b6f07de5175e2ac8aff85e839`，唯一hash包经官方CLI安装，Host/Client逐一hash匹配build。最终AX再次确认顶部两个可用按钮、Harness选中；截图仅本地output/playwright/dsh-duo-brand-header.png。开发preview进程和Agent临时tab已关闭，DSH保持原会话/Harness；未stage/commit/push。
+- 最终验证：pnpm typecheck、test（23/23）、package:plugin通过；单lazy工厂/3共享baseline，14文件tarball。最终SHA256 `77a175008dd8a25151fd5abc4f934614f80bde2b6f07de5175e2ac8aff85e839`，唯一hash包经官方CLI安装，Host/Client逐一hash匹配build。最终AX再次确认顶部两个可用按钮、Harness选中；截图仅本地output/playwright/dsh-chat-brand-header.png。开发preview进程和Agent临时tab已关闭，DSH保持原会话/Harness；未stage/commit/push。
 - 结束Git检查：git diff --check通过，15个源码/测试/文档文件为未暂存修改；暂存区空，main/HEAD仍35da7f0，与origin/main为0/0。W013未跨设备同步，构建包/截图被Git排除，等待用户验收和手动交付。
 
 ## W014 · 2026-10-10 · T03/T13 · 修复自动递增补丁版本
@@ -153,7 +154,7 @@
 - 实现文件：src/client仅CHAT注入sidebar.workspaces；ui/styles移除独立侧栏解释页、蓝色品牌和假账号；web-surface保活guest并串行有限DOM适配/8秒检查期限；新增website-navigation自包含origin/链接/列几何限制、清空/恢复原导航。preview始终共用外壳，增加生产适配函数的DOM fixture；client/server fixture与导航输入回归同步。稳定入口/需求/架构/路线/资料/handoff及使用者README已更新，没有把Agent计划写入README。
 - 实际版本0.1.0→0.1.1且已递增一次。pnpm typecheck、pnpm test（27/27）、pnpm package:plugin/artifact检查通过。CSP隔离preview验证分组/选中/新建、空列表、登录视图、结构变化清空并撤回隐藏style、恢复/退出释放，浏览器0 errors/0 warnings；不是官网真实空账号/登出证据。
 - Mac实测在已有网页登录状态下真实列表移到原左栏、选择右侧对应对话、＋官网新建、原顶部/材质/账号持续保留；往返原Harness会话和未发送草稿保活通过，验收草稿已清除，未发送消息。最终包再测列表/选中及折叠→备用展开→原顶部恢复通过。原顶部新会话/菜单/快捷键仍走Harness，缺公开替换回调，不能称为统一新建语义；真实空账号/分页/首次登录/消息/跨端历史/账号回退与完整右栏矩阵待验收。
-- 最终本地包artifacts/dsh-duo-0.1.1-9654619f1e2f.tgz，SHA256 9654619f1e2fd4dfa0b48b146eb1006e65ba236bf94de876ea4e2113907b8535；官方CLI更新desktop，安装版本0.1.1且Host/Client hash逐项匹配build（完整值见handoff）。CLI泛化peer warning保留，不影响本次启用。前两个候选包已被此最终包取代，接力不要选旧hash。
+- 最终本地包artifacts/dsh-chat-0.1.1-9654619f1e2f.tgz，SHA256 9654619f1e2fd4dfa0b48b146eb1006e65ba236bf94de876ea4e2113907b8535；官方CLI更新desktop，安装版本0.1.1且Host/Client hash逐项匹配build（完整值见handoff）。CLI泛化peer warning保留，不影响本次启用。前两个候选包已被此最终包取代，接力不要选旧hash。
 - 单Agent工作交还用户验收，无进行中分工；源代码/上下文仅本地，未stage/commit/tag/push，远端仍c169200。仍按用户手动Git流程；本轮接力不再涨号，下轮独立修复为0.1.2。截图本地Git排除，仓库不写个人历史标题/链接/正文或凭据。
 - 收尾git diff --check通过、暂存区为空；preview服务和本轮创建的官网检查/模拟浏览器页关闭。最终DSH保留CHAT、已选官网对话、空输入供用户验收；没有发送消息或留下验收草稿，不新增全球记忆。
 
@@ -170,8 +171,8 @@
 - 验证：pnpm typecheck、test（27/27）、package:plugin/artifact通过；生产适配+DOM fixture验证原顶部鼠标/Enter仅官网新建、无Harness新建、Harness恢复原点击/插件行、登录页禁用、退出恢复/释放及折叠绑定。最后补准确SlotOutlet包装后再次验证顶部Enter/隐藏/无错误提示；浏览器warn/error为空，CSP不联网，不冒称官网实测。
 - 实机最终0.1.2：靠右控件对齐侧栏留白，原材质/真实账号区保留；CHAT插件行隐藏，网页工具按钮/底部提示移除，官网sign_in时原新会话和＋禁用；往返回同一原Harness会话和关闭右栏，折叠备用展开正常。Harness插件页禁用恢复原HARNESS徽标、重启用授权收敛且保持Harness；最终再进入CHAT供验收。没有输入凭据/验证码、登录或发送消息。已登录官网顶部新建、菜单/快捷键、首次登录/发送/跨端历史等未验收/未实现项见handoff。
 - 登录结论限当前已核查公开能力：Platform/API账号授权与独立Browser进程内分区，不存在已确认Chat SSO入口。没有调用Host-only凭据方法或移植Cookie；不能把DSH有效授权说成官网免登录。README只同步影响使用者的功能/权限/限制，全部开发上下文由AGENTS及需求/架构/路线/资料/handoff/worklog维护。
-- 最终包artifacts/dsh-duo-0.1.2-373eab046e75.tgz，SHA256 373eab046e7518c4ff8ead34944d3b9c54cbfc80fe099e7490ec9ee3b59d68fb；16白名单文件、单lazy工厂/3共享baseline。官方CLI更新desktop，实际0.1.2、Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client hash 2e39529e8fece89140ef4efa053bd4c3f49bea7b1c2be0cf6efab418628b3604均匹配。中间2cae9acb7dce及首包均被最终包取代。CLI泛化peer warning仍记录，没有冒称零警告。
-- 本阶段完成并交还用户验收，无进行中负责人；main仍f3ab5c7，本轮源码/上下文仅本地，未stage/commit/tag/push。临时preview服务/浏览器页关闭；实机截图output/playwright/dsh-duo-0.1.2-chat.png仅本地Git排除。最终DSH保持CHAT官网登录视图，无测试草稿或消息，不写全球记忆。下一轮独立修复0.1.3，本轮不可再重复涨号。
+- 最终包artifacts/dsh-chat-0.1.2-373eab046e75.tgz，SHA256 373eab046e7518c4ff8ead34944d3b9c54cbfc80fe099e7490ec9ee3b59d68fb；16白名单文件、单lazy工厂/3共享baseline。官方CLI更新desktop，实际0.1.2、Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client hash 2e39529e8fece89140ef4efa053bd4c3f49bea7b1c2be0cf6efab418628b3604均匹配。中间2cae9acb7dce及首包均被最终包取代。CLI泛化peer warning仍记录，没有冒称零警告。
+- 本阶段完成并交还用户验收，无进行中负责人；main仍f3ab5c7，本轮源码/上下文仅本地，未stage/commit/tag/push。临时preview服务/浏览器页关闭；实机截图output/playwright/dsh-chat-0.1.2-chat.png仅本地Git排除。最终DSH保持CHAT官网登录视图，无测试草稿或消息，不写全球记忆。下一轮独立修复0.1.3，本轮不可再重复涨号。
 - 收尾检查：8份当前Markdown链接/代码围栏及git diff --check通过；暂存区为空，15份当前源码/文档文件为本地修改/新增，HEAD/origin仍f3ab5c7且0/0。最终包内README与工作区hash一致，所有产物/截图均未进入Git；没有本轮远程安装新提交的验证，因为尚未推送。
 
 ## W017 · 2026-10-10 · T06/T08/T09/T13 · 登录布局与设置
@@ -188,7 +189,32 @@
 - 打包调试：pnpm pack反馈不足；默认npm cache写入被sandbox限制，改临时npm cache后显式build+pack成功，不改系统权限。CLI help要求profile且尝试触发原profile锁，sandbox拒绝，无配置变化；未猜测disable命令，恢复验证继续使用官方原界面。Python中文stdin编码失败和一次patch上下文不匹配均未写入文件，改精确apply_patch成功。
 
 - 补查原官网导航恢复后，snapshot恢复会取消原生设置多步请求；Client设置入口先回到适配状态，保留请求流程，单元回归及最终fixture原导航可见→原生设置读回通过。本轮最终build/28项测试通过，首屏fixture从System/opacity0到Dark/opacity1；warnings/errors为0。
-- 最终包artifacts/dsh-duo-0.1.3-1bec00d16d90.tgz，SHA256 1bec00d16d90559811889a2ccd9798807b3d0191db36d58f0c82853d5c45c738，16文件/README与版本匹配。官方CLI更新desktop实际0.1.3，Host c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client 4ead262e29b350e2ebe5ccff205fd07f36254040e3abf52084c49030396de35b逐项匹配build。所有中间0.1.3包包括30f7c02661f3均被取代；泛化peer warning保留。
+- 最终包artifacts/dsh-chat-0.1.3-1bec00d16d90.tgz，SHA256 1bec00d16d90559811889a2ccd9798807b3d0191db36d58f0c82853d5c45c738，16文件/README与版本匹配。官方CLI更新desktop实际0.1.3，Host c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54、Client 4ead262e29b350e2ebe5ccff205fd07f36254040e3abf52084c49030396de35b逐项匹配build。所有中间0.1.3包包括30f7c02661f3均被取代；泛化peer warning保留。
 - 本轮Harness原插件页禁用恢复HARNESS徽标/新建/插件导航，重启用授权收敛且保持Harness；最终更新从Harness开始，进入Chat原生设置读取真实账号/简体中文、无外观选项、固定暗色，主区无重复导航/残留占位截图确认。首次完整重新登录/逐帧、消息/跨端历史、Chat直接禁用/完整卸载及其他平台仍未验收，详见handoff。
 - 工作已交还用户验收；AGENTS、需求/架构/路线/资料及handoff/worklog同步完整目标、发现、失败、实现和证据，README只同步用户功能/版本/权限/限制。本轮0.1.2→0.1.3一次，无Git交付/全球记忆；下轮独立修复0.1.4。最终DSH保持CHAT中文空主页，无验收草稿/消息；个人截图仅本地output/playwright且Git排除，临时preview进程/页已关闭。
 - 收尾fetch成功；main/HEAD/origin仍b0b8e4b，0/0。git diff --check和8份Markdown链接/围栏检查通过，21份源码/测试/文档未暂存、暂存区空；最终包与截图均被Git排除。未stage/commit/tag/push，工作区成果等待用户验收及手动同步，没有本轮远程新提交安装验证。
+
+## W018：统一名称与独立管理图标（2026-10-10）
+
+- 目标：用户指定全名dsh-chat，随后明确所有旧名都要改；用户要自行替换插件管理列表图标，明确不是侧栏DeepSeek品牌。基线main=39cce8b，开工干净；W017已由用户提交，本轮无并行分工。
+- 决策：全面同步包名、Host/Client name、patch、严格Typert贡献与dshChat namespace、DshChat类型、自有Slot/DOM/CSS前缀、测试/预览/构建许可与仓库文本；不留别名。按用户要求历史名称示例也统一，新旧版本hash不改，历史证据不作为本轮重装验收。
+- 图标：官方rc.2固定文档确认顶层icon/manifest export/files；新增assets/icon.svg和./package.json导出，Git源码安装fixture携带assets。简单自包含SVG作为可替换初始图标，用户后续修改保留；不替换DSH品牌。
+- 目录与远程：实际项目已在/Users/ui/Downloads/dsh-chat；旧授权写入根仍指原目录，首次普通写入因Operation not permitted失败，未改文件；后续通过已批准的本地目录写入执行。新SSH地址ls-remote成功、HEAD=39cce8b7134937a58174037f38f20d0402f9db4a，origin同步为新地址；gh未登录，不调用登录或读取凭据。
+- 版本：0.1.3→0.1.4，本轮改名/图标一次涨号。不修改DSH安装状态，旧插件升级需先禁用/移除，不能两份同时接管；新的guest可能需要正常重新网页登录。
+- 最终验证：28/28既有回归、生产类型构建与lazy工厂契约通过；pnpm10.33.2隔离source-only Git安装prepare成功、Host导入/Client注册通过（esbuild脚本许可提示仍保留）。本轮未重跑DSH pnpm11或更新应用。npm临时cache显式build后pack成功，17文件包括524-byte有效自包含SVG；名称/版本/两端产物及图标内容逐项匹配，SHA256=9efa18a1d75cbbd5dea8c7ed0ca749fbbbd09d91045d5b74ba7169789ee79197。Git跟踪文本及新lib无旧名，diff --check通过；图标真实管理页显示待用户安装验收。用户手动stage/commit/push，Agent不执行；所有工作与剩余目标记录于AGENTS/handoff/相关主文档，README只写使用者内容。
+
+### W018图标替换验收续步（2026-10-10）
+
+- 用户已替换管理图标并要求看效果。assets/icon.svg为8548 bytes、256×256 viewBox、自包含渐变SVG，无外部引用；SHA256=3486ce8ca98a018cb7d23478da3ffc7692847b12ad177f7f6bdd33dfa4eec6ad。仅读取/打包/渲染预览，未覆盖或改动用户图标；同轮保持0.1.4。
+- 现有生产lib未变，更换静态资源后npm临时cache pack --ignore-scripts通过，17文件；逐项确认tar包含实际用户SVG。唯一包artifacts/dsh-chat-0.1.4-9592bd2693ac.tgz，SHA256=9592bd2693ace49d4bbcf328c9f3c337fa73dc1306de590987c375a134adc174，替代前一图标候选。PNG预览/tmp/dsh-chat-icon-preview.png仅本机，bundled sharp对SVG栅格化供查看，不属于图标编辑。
+- CUA原生AX确认DSH在插件管理页、HARNESS选中，仍安装旧名称插件；default desktop manifest只读取该插件的依赖/组合包项。官方CLI未在PATH，使用安装包runtime/cli/bin/dsh；plugin --help未指定profile拒绝，指定profile的帮助尝试因写profile lock的沙箱限制失败，未把它当作安装成功。
+- 计划通过官方CLI移除旧插件再装新名称以免双重接管，移除命令被自动审批拒绝：可能丢失插件容器/网页登录态，而本轮用户只要求看图标，未明确授权卸载迁移。没有执行移除，不通过UI或其他方式绕过；已提供预览并以异步问题申请明确迁移授权。当前实际安装未更新，等待用户答复；不把本地图标渲染写成DSH实机效果。
+- 未stage/commit/push，无全球记忆写入；原28项回归与构建结果沿用，因为本续步仅替换静态资源。
+
+### W018明确授权后的本机迁移完成（2026-10-10）
+
+- 用户明确回答“允许迁移安装，查看DSH实际效果”，可执行之前被自动审批拒绝的迁移。再次申请后官方CLI移除/安装获准、均exit=0；runtime pnpm11.7.0保留泛化peer warning。使用唯一9592bd2693ac tarball、ignore-scripts，不改账号聊天记录/凭据，不提交或推送。
+- desktop profile仅新名称依赖，实际安装manifest为dsh-chat@0.1.4。SVG SHA256=3486ce8ca98a018cb7d23478da3ffc7692847b12ad177f7f6bdd33dfa4eec6ad，Host=8ef1a6fd56f57978a003c65e826a996a9afca8d004d892f222aad1065a851f6b，Client=4c0f79655e0b2e3890f88df446841bed449d7d11e4574c85dd15a7751f402e00，全部与项目源资源/构建逐字节匹配。
+- CUA此前Node runtime启动ENOENT；实际bundled Node存在、配置的旧cwd不存在。创建临时空旧cwd后getApp恢复，证实目录改名导致连接启动问题；不重新初始化仓库/复制源码，收尾尝试rmdir时返回ENOENT，随后独立确认临时空目录已不存在，没有删除项目或其他数据。安装后的管理页刷新仍缓存旧名，原生菜单正常退出/重开解决，未强杀进程。
+- CUA AX/截图：顶部为dsh-chat模式控件、HARNESS选中且授权收敛，安装管理页只有新名称；详情v0.1.4、启用on、共1组件/1运行中，包/组件均显示用户的新SVG。最终留在该详情页，实机图/tmp/dsh-chat-0.1.4-installed.png不入Git。此项已完成，不再留“迁移待授权”状态。
+- 没有进入官网/发送消息或额外扩展测试矩阵，W017的首次登录/流式/跨端等未验收项保持未验收；同轮0.1.4，不重复涨号。代码与上下文修改只在本地，交还用户手动Git。

@@ -1,5 +1,43 @@
 # 当前状态与开发接力
 
+更新日期：2026-10-10（Asia/Shanghai）。当前轮次W018，插件统一名称dsh-chat，版本0.1.4。单Agent Codex/macOS，基线main=39cce8b（W017已由用户提交）。当前仓库目录/SSH地址同为新名称；源码仅本地改动，无自动提交/推送；用户已明确授权后，本机DSH迁移安装与图标实机验收完成。
+
+## 本轮目标与范围
+
+用户要求全部旧名称统一为dsh-chat，并自行修改插件管理列表图标。完成标准：包名/Host与Client入口/patch/服务与严格协议/Slot与DOM/CSS/脚本/当前及历史文档引用一致；图标有独立文件并通过官方元数据进入安装包；回归、构建及打包检查通过，安装步骤说明旧插件须先移除。历史功能目标和未验收矩阵继续沿用下方W017任务表，本轮不将过去的实测结果当作新名称安装验收。
+
+范围归T01/T02/T03/T05/T13：源码、测试与预览标识，package/patch，Git安装fixture，assets/icon.svg，README与全部上下文文档。服务为dshChat，类型为DshChat*；原DSH侧栏和官网适配策略、授权门槛及固定暗色保持原实现。用户可直接替换assets/icon.svg，Agent不覆盖其后续图标修改。
+
+## 验证和交付状态
+
+验证完成：
+
+- node scripts/test.mjs：28/28通过，包含真实目标Cordis/Typert Host/Client严格绑定和卸载回归；改名后的dshChat namespace可用。
+- node scripts/build.mjs：生产类型检查/Host ESM/单lazy-CJS Client通过，仍为3个公开共享模块，无新增运行时依赖。
+- pnpm check:git-install：pnpm10.33.2在隔离source-only Git fixture中通过prepare生成入口，安装dsh-chat@0.1.4，Host可导入，Client注册匹配。fixture携带assets，未操作项目暂存区/提交；pnpm提示esbuild构建脚本未批准，但本次prepare与构建成功。DSH内置pnpm11本轮未重跑，不用pnpm10结果替代其许可验证。
+- npm临时cache pack --ignore-scripts：显式构建后成功打包artifacts/dsh-chat-0.1.4.tgz，共17个白名单文件，package/README/patch版本名称正确，Host/Client与lib逐项相同，用户替换后的SVG实际包含且XML有效、8548 bytes、无外部引用，远小于256 KiB。当前唯一验收包artifacts/dsh-chat-0.1.4-9592bd2693ac.tgz（与通用0.1.4.tgz一致），SHA256=9592bd2693ace49d4bbcf328c9f3c337fa73dc1306de590987c375a134adc174；先前9efa18a1候选包不再用于当前图标验收。
+- 全部Git跟踪文本与新lib扫描不含旧名称；git diff --check通过。pnpm-lock无需变更，因为名称/资源变化未改依赖。图标静态契约/打包验证及本机DSH管理页实机显示通过；改名后的0.1.4已按用户明确授权迁移安装，详情显示运行中。
+
+本轮用户已替换assets/icon.svg并要求看效果，属于W018验收续步，保持0.1.4不重复涨号；未修改其SVG。首次移除申请被自动审批拒绝，随后用户明确回答“允许迁移安装，查看DSH实际效果”，原阻碍已解除。
+
+- 通过安装包自带官方CLI/runtime pnpm11.7.0，使用ignore-scripts移除旧名称插件并安装唯一tarball；两步exit=0，泛化peer warning仍保留，不宣称零警告安装。只改本机插件组合，未读取/迁移凭据、未操作聊天记录。
+- 独立读取desktop profile确认只保留新名称依赖；实际node_modules/dsh-chat为0.1.4，icon/Host/Client与本地逐字节相同。icon SHA256=3486ce8ca98a018cb7d23478da3ffc7692847b12ad177f7f6bdd33dfa4eec6ad；Host=8ef1a6fd56f57978a003c65e826a996a9afca8d004d892f222aad1065a851f6b；Client=4c0f79655e0b2e3890f88df446841bed449d7d11e4574c85dd15a7751f402e00。
+- CUA最初无法启动Node runtime。实际项目已改名，而聊天配置仍指向不存在的旧cwd；创建一个临时空旧目录后连接恢复，未创建第二份仓库、未复制项目，收尾确认该空目录已不存在；rmdir返回ENOENT，没有删除项目或其他数据。后续Agent应使用本页实际目录，不把此工具路径修复当成项目回滚。
+- 原插件管理页刷新仍显示旧缓存；通过DSH原生菜单正常退出/重开后加载新组成。CUA确认dsh-chat模式控件存在，HARNESS选中且授权已收敛；进入管理页/详情，新用户SVG在组合包与组件图标位置均正常显示，v0.1.4、1个组件/1运行中、启用on。
+- 实机截图/tmp/dsh-chat-0.1.4-installed.png只保留本机，不入Git；最终窗口停留dsh-chat详情供用户查看。未进入官网、未输入凭据/发送消息，也未验收其余聊天矩阵。
+
+版本0.1.3→0.1.4仅递增一次。旧名称插件已移除，新版单独启用；此轮正常重启后官网容器需按原Browser策略正常登录。新设备必须在用户手动提交后拉取，不依赖本机产物或聊天历史。
+
+## 下一步
+
+本机改名/管理图标/启用实机验收已完成，交还用户查看并自行提交/推送；首次网页登录/逐帧闪现、真实消息发送与流式、跨端历史、DSH退出/换账号、完整卸载及其他平台矩阵仍待验收，见W017限制。不自动发送消息，不修改安装包或凭据。
+
+## 历史记录说明
+
+遵照用户“所有旧名称统一”的要求，以下历史文档的名称和路径示例已采用当前名称展示。W010–W017的版本/提交/产物哈希仍指对应历史轮次，不能拿旧包作为W018安装包或新图标验收依据；当前包与验证以本页顶部W018记录为准。
+
+# W017历史交接记录
+
 更新日期：2026-10-10（Asia/Shanghai）。W017 / 0.1.3候选修复完成，单Agent Codex/macOS工作已交还用户验收，无进行中分工。用户登录截图推翻W016不足的验收结论，历史失败保留worklog，当前需求以requirements、技术证据以architecture/references为准。
 
 ## 总目标与当前路线
@@ -64,9 +102,9 @@ W017修复官网重复导航轨道/紧凑头部，加载和登录SPA先遮罩，
 
 ## 最终收尾记录
 
-- 最终包artifacts/dsh-duo-0.1.3-1bec00d16d90.tgz，SHA256 1bec00d16d90559811889a2ccd9798807b3d0191db36d58f0c82853d5c45c738；通用0.1.3.tgz内容一致。16个白名单文件，版本/README匹配；单lazy工厂/3共享baseline。此前所有0.1.3候选包（包括30f7c02661f3）已被此包替代，不能选旧hash交接。
+- 最终包artifacts/dsh-chat-0.1.3-1bec00d16d90.tgz，SHA256 1bec00d16d90559811889a2ccd9798807b3d0191db36d58f0c82853d5c45c738；通用0.1.3.tgz内容一致。16个白名单文件，版本/README匹配；单lazy工厂/3共享baseline。此前所有0.1.3候选包（包括30f7c02661f3）已被此包替代，不能选旧hash交接。
 - 官方CLI更新desktop --ignore-scripts成功；实际版本0.1.3，Host hash c8ceb119f9245f836d5146f2c2f6978d4cbce114cb46ffbbe4fa0512c473de54，Client hash 4ead262e29b350e2ebe5ccff205fd07f36254040e3abf52084c49030396de35b，逐项与build匹配。CLI泛化peer warning不影响本次加载，仍记录。
 - 最终源码fixture初始System/opacity0→实际Dark/opacity1，导航轨道隐藏、内容扩展、紧凑头部隐藏且官网设置对话框关闭；恢复原导航可见后再次进原生设置正常读回，无卡住。浏览器warnings/errors为0；真实guest首帧/首次重新登录不能由此替代。
 - 本轮原插件页禁用恢复原HARNESS徽标、新建/插件导航；重启用授权收敛并保持Harness。最后更新再次从Harness开始，进入CHAT实际账号/简体中文值显示、无外观选项、固定暗色及主区无重复导航/占位已截图确认；最终保留CHAT中文空主页，无测试草稿或消息。
-- 本地验收截图output/playwright/dsh-duo-0.1.3-settings.png与dsh-duo-0.1.3-chat.png仅本机且Git排除，未写入仓库；本轮创建的模拟浏览器页与preview进程已关闭，用户页面/DSH继续保留。
+- 本地验收截图output/playwright/dsh-chat-0.1.3-settings.png与dsh-chat-0.1.3-chat.png仅本机且Git排除，未写入仓库；本轮创建的模拟浏览器页与preview进程已关闭，用户页面/DSH继续保留。
 - 结束fetch成功，main/HEAD/origin仍b0b8e4b且0/0；git diff --check及8份Markdown链接/围栏检查通过，21份源码/测试/文档未暂存，暂存区空。包/截图均Git排除；本轮未stage/commit/tag/push，不宣称跨设备同步。下一Agent先fetch核对用户手动提交，不为同轮补涨版本。

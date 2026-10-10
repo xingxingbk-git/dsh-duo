@@ -1,8 +1,8 @@
-# dsh-duo
+# dsh-chat
 
-**dsh-duo** 在 DeepSeek Harness（DSH）桌面版中提供 `CHAT | HARNESS` 切换。CHAT 的主区加载真实的 [DeepSeek Chat 官网](https://chat.deepseek.com/)，由官网处理网页登录、聊天和网页账号历史；HARNESS 保留原 DSH 工作区。
+**dsh-chat** 在 DeepSeek Harness（DSH）桌面版中提供 `CHAT | HARNESS` 切换。CHAT 的主区加载真实的 [DeepSeek Chat 官网](https://chat.deepseek.com/)，由官网处理网页登录、聊天和网页账号历史；HARNESS 保留原 DSH 工作区。
 
-当前插件版本为 **0.1.3**，针对 **DSH 0.2.0-rc.2**。两种模式共用DSH原侧栏：顶部、背景材质和底部账号保持一致，CHAT中间区域显示官网真实对话列表，并隐藏插件导航行。官网列表选择、顶部/折叠新建、语言切换及往返已有实测；首次登录、发送及另一浏览器历史一致性待验收。
+当前插件版本为 **0.1.4**，针对 **DSH 0.2.0-rc.2**。两种模式共用DSH原侧栏：顶部、背景材质和底部账号保持一致，CHAT中间区域显示官网真实对话列表，并隐藏插件导航行。官网列表选择、顶部/折叠新建、语言切换及往返已有实测；首次登录、发送及另一浏览器历史一致性待验收。
 
 ## 使用方式
 
@@ -30,17 +30,19 @@ pnpm test
 pnpm package:plugin
 ```
 
-预构建安装包为 `artifacts/dsh-duo-0.1.3.tgz`。它包含 Host、Client、类型声明和官方 bundle patch。通过 DSH 官方插件管理器安装本地 tarball；CLI 示例（将路径替换为你的实际文件）：
+预构建安装包为 `artifacts/dsh-chat-0.1.4.tgz`。它包含 Host、Client、类型声明和官方 bundle patch。通过 DSH 官方插件管理器安装本地 tarball；CLI 示例（将路径替换为你的实际文件）：
 
 ```bash
-dsh plugin --profile desktop add /absolute/path/dsh-duo-0.1.3.tgz --ignore-scripts
+dsh plugin --profile desktop add /absolute/path/dsh-chat-0.1.4.tgz --ignore-scripts
 ```
 
 若使用其他 profile，替换 `desktop`。安装后按 DSH 提示重新加载。卸载可通过原插件管理界面，或：
 
 ```bash
-dsh plugin --profile desktop remove dsh-duo
+dsh plugin --profile desktop remove dsh-chat
 ```
+
+从旧版本改名升级时，先在 DSH 插件管理器中禁用并移除旧名称的插件，再安装 `dsh-chat`，避免两份插件同时接管界面。插件改名会创建新的网页容器，可能需要重新登录官网。
 
 ### 从 GitHub 地址安装
 
@@ -49,10 +51,10 @@ dsh plugin --profile desktop remove dsh-duo
 使用固定提交安装：
 
 ```bash
-dsh plugin --profile desktop add "github:xingxingbk-git/dsh-duo#<完整提交哈希>"
+dsh plugin --profile desktop add "github:xingxingbk-git/dsh-chat#<完整提交哈希>"
 ```
 
-将占位哈希替换为实际提交。DSH 0.2.0-rc.2 内置 pnpm 11：首次执行会提示 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，按它打印的准确 Git 包标识在 `$DSH_HOME/profiles/desktop/pnpm-workspace.yaml` 中增加 `allowBuilds`，再重试。保留已有配置，只允许本次指定提交，不要全局允许所有依赖脚本。普通 pnpm 10 的 CLI 可用 `--allow-build=dsh-duo`，该参数不能替代 pnpm 11 的 Git 身份许可。
+将占位哈希替换为实际提交。DSH 0.2.0-rc.2 内置 pnpm 11：首次执行会提示 `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`，按它打印的准确 Git 包标识在 `$DSH_HOME/profiles/desktop/pnpm-workspace.yaml` 中增加 `allowBuilds`，再重试。保留已有配置，只允许本次指定提交，不要全局允许所有依赖脚本。普通 pnpm 10 的 CLI 可用 `--allow-build=dsh-chat`，该参数不能替代 pnpm 11 的 Git 身份许可。
 
 构建执行本仓库的脚本；不希望在安装时构建可使用上面的预构建 `.tgz`。
 
@@ -66,6 +68,10 @@ dsh plugin --profile desktop add "github:xingxingbk-git/dsh-duo#<完整提交哈
 - 手动模式切换保留网页；插件卸载、DSH 授权失效或账号代次变化会销毁容器。未发送草稿和网页在途生成无法由插件提取、备份或调用官网停止接口。
 - 本版适配顶部“新会话”的鼠标/Enter点击，CHAT转交官网；Harness快捷键/菜单仍执行Harness行为，可能创建新的Harness会话并退出CHAT。侧栏结构不匹配会提示并保留原顶部行为，CHAT可使用列表标题旁＋。
 - 原生 Browser 安全策略会限制下载、设备权限及部分弹窗；网页登录、验证码、上传等须实测。普通 Web 浏览器版暂不开放 iframe 回退。
+
+## 插件图标
+
+插件管理列表使用 `assets/icon.svg`。替换该文件即可修改图标，重新打包并安装后生效。请保持 SVG 自包含、不引用外部图片或字体，文件不超过 256 KiB；它只影响插件管理图标，不替换 DSH 左上角品牌。配置在 `package.json` 的 `icon` 字段中，资源已加入发布清单。
 
 ## 权限与数据流
 

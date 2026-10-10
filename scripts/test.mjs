@@ -9,7 +9,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const testsDirectory = path.join(projectRoot, 'tests')
 const files = (await readdir(testsDirectory)).filter(file => file.endsWith('.test.ts')).sort()
 if (files.length === 0) throw new Error('No tests/*.test.ts files found')
-const outputDirectory = await mkdtemp(path.join(tmpdir(), 'dsh-duo-tests-'))
+const outputDirectory = await mkdtemp(path.join(tmpdir(), 'dsh-chat-tests-'))
 let exitCode = 1
 try {
   await build({
@@ -32,8 +32,8 @@ try {
         })
         plugin.onLoad({ filter: /.*/, namespace: 'client-di-fixture' }, args => ({
           contents: args.path === './ui.js'
-            ? 'export const DuoBrandName = () => null; export const DuoBrandControl = () => null; export const DuoChatNavigation = () => null; export const DuoChatPanel = () => null; export const DuoLeadingControls = () => null; export const DuoChatSettings = () => null;'
-            : 'export const DuoWebSurface = () => null;',
+            ? 'export const DshChatBrandName = () => null; export const DshChatBrandControl = () => null; export const DshChatChatNavigation = () => null; export const DshChatChatPanel = () => null; export const DshChatLeadingControls = () => null; export const DshChatChatSettings = () => null;'
+            : 'export const DshChatWebSurface = () => null;',
           loader: 'js',
         }))
       },

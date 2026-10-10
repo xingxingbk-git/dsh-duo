@@ -1,4 +1,4 @@
-# dsh-duo：Agent / Codex 开发指南
+# dsh-chat：Agent / Codex 开发指南
 
 ## 项目目标
 为 DSH 提供可逆的 CHAT / HARNESS 模式切换。项目入口为 `src/index.ts`（Host）与 `src/client.ts`（Web Client）；bundle/client manifest 在 `package.json`，Cordis profile layer 在 `cordis.patch.yml`。完整需求见 [docs/requirements.md](docs/requirements.md)，版本与扩展契约见 [docs/architecture.md](docs/architecture.md)。
@@ -6,7 +6,7 @@
 ## 全项目共享上下文入口
 - 本文件是所有设备、所有 Agent 工具的项目上下文入口。同步范围包括整个项目的任务目标和全部有实质影响的工作，不限于登录逻辑或代码变更。
 - 最终体验：DeepSeek 图标后的 `CHAT | HARNESS` 切换器、白底选中态、CHAT 的对话导航/主区、HARNESS 原工作区完整恢复、授权联动，以及经官方能力确认后的真实聊天和网页历史同步。
-- 当前成果：0.1.3候选版共用原DSH侧栏，仅CHAT时替换sidebar.workspaces；官网导航镜像及有限原侧栏适配沿用W015/W016。W017新增官方原生CHAT设置（真实网页账号/语言，固定暗色），删除整个插件工具栏，shell.leading提供折叠展开/官网新建，修复网页导航占位/紧凑头部并增加首屏遮罩。28项回归及构建通过；实机证据和未验收项以handoff为准。开工main/origin为b0b8e4b，本轮修改只在本地待验收/手动Git。
+- 当前成果：W018 / 0.1.4将插件名称及所有仓库文本统一为dsh-chat，包名、Host/Client入口、服务namespace dshChat、面板/Slot/DOM标识、类型与脚本均已同步；插件管理图标为assets/icon.svg，用户已替换；获明确迁移授权后，本机旧名称插件已移除、dsh-chat 0.1.4安装启用，管理详情页新图标和运行中已实机确认（详情handoff）。沿用W017共用侧栏、原生CHAT设置和固定暗色，功能范围不增加。本轮基线main=39cce8b，构建与28项回归结果、安装包及未验收项以handoff为准。本轮仅本地修改，用户手动提交/推送；本轮用户已明确授权本机迁移安装；后续安装变更仍按用户实际授权处理。
 - 当前主线：官方Browser lease保活官网，共用侧栏与原生CHAT设置，退出恢复原工作区；DSH与Chat登录仍独立，未发现官方Chat SSO桥，不迁移凭据。继续完成首次登录/发送/跨端历史等实机验收及原菜单/快捷键剩余契约，不重复全面替换侧栏。CHAT固定暗色，不添加外观选项。
 - 全部任务 ID、目标/完成标准、状态、依赖、负责人、文件范围和下一步见 [docs/handoff.md](docs/handoff.md)；决策理由、尝试/失败及阶段记录见 [docs/worklog.md](docs/worklog.md)。任何新的工作也必须纳入这套记录。
 - 下一个 Agent 应仅靠仓库回答：为什么做、目标是什么、已经做了什么、为什么这样决定、什么证据可信、谁在做什么、哪些没做/受限、现在该从哪里继续。缺失的信息先从实际文件/证据补齐，不要求用户重述已确认事项。
@@ -20,7 +20,7 @@
 - 本轮补充：CHAT数据源为真实网页，网页内登录和DSH授权独立。公开Browser桥没有网页账号/登出通知，不能冒称网页登出即时联动或同账号匹配；用户允许的DOM导航镜像不等于官方历史API。详见requirements的最新试用范围。
 
 ## 仓库与信息来源
-- 仓库：`git@github.com:xingxingbk-git/dsh-duo.git`；默认协作分支 `main`。
+- 仓库：`git@github.com:xingxingbk-git/dsh-chat.git`；默认协作分支 `main`。
 - 项目理解必须来自已提交的仓库文件，不依赖某台设备的聊天历史、Codex 全局记忆、安装路径或 `/tmp` 提取文件。
 - 当前需求以 `docs/requirements.md` 为准；技术证据及限制以 `docs/architecture.md` 为准；阶段安排以 `docs/roadmap.md` 为准；全项目当前任务、进展、分工和下一步以 [docs/handoff.md](docs/handoff.md) 为准；决策和工作历史见 [docs/worklog.md](docs/worklog.md)。细节只在对应主文档维护，入口与快照通过摘要/链接引用，避免多份互相矛盾的全文副本。
 - `docs/review-2026-10-09.md` 是历史审查快照，存在后续已修订的建议；不要用历史建议覆盖当前已确认需求。冲突时遵循用户最新指令并同步所有受影响文档。

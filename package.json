@@ -1,6 +1,6 @@
 {
-  "name": "dsh-duo",
-  "version": "0.1.3",
+  "name": "dsh-chat",
+  "version": "0.1.4",
   "private": true,
   "description": "CHAT / HARNESS mode switcher for DeepSeek Harness",
   "type": "module",
@@ -18,12 +18,14 @@
     "./client": {
       "types": "./lib/types/client.d.ts",
       "default": "./lib/client.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "lib",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "assets/icon.svg"
   ],
   "scripts": {
     "prepare": "node ./scripts/build.mjs",
@@ -80,5 +82,6 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "typescript": "5.8.3"
-  }
+  },
+  "icon": "./assets/icon.svg"
 }

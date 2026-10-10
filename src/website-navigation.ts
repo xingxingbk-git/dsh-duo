@@ -23,54 +23,54 @@ export const emptyNavigation = (): WebsiteNavigation => ({ status: 'loading', co
 /** This function is serialized into our isolated guest. Keep all helpers inside it. */
 export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'origin' | 'pathname'>, command: WebsiteCommand): WebsiteNavigation {
   const origin = 'https://chat.deepseek.com'
-  const marker = 'data-dsh-duo-navigation'
-  const styleId = 'dsh-duo-website-navigation-style'
-  const preparingStyleId = 'dsh-duo-website-preparing-style'
-  const owned = [marker, 'data-dsh-duo-layout', 'data-dsh-duo-content', 'data-dsh-duo-web-chrome', 'data-dsh-duo-profile', 'data-dsh-duo-settings-dialog', 'data-dsh-duo-expanding']
+  const marker = 'data-dsh-chat-navigation'
+  const styleId = 'dsh-chat-website-navigation-style'
+  const preparingStyleId = 'dsh-chat-website-preparing-style'
+  const owned = [marker, 'data-dsh-chat-layout', 'data-dsh-chat-content', 'data-dsh-chat-web-chrome', 'data-dsh-chat-profile', 'data-dsh-chat-settings-dialog', 'data-dsh-chat-expanding']
   const empty = (status: WebsiteNavigation['status']): WebsiteNavigation => ({ status, conversations: [], selectedHref: null, canCreate: false, error: null })
   const clearSettings = () => {
-    for (const attr of [...doc.documentElement.attributes]) if (/^data-dsh-duo-(settings-|language$|theme$|dark-complete$)/.test(attr.name)) doc.documentElement.removeAttribute(attr.name)
+    for (const attr of [...doc.documentElement.attributes]) if (/^data-dsh-chat-(settings-|language$|theme$|dark-complete$)/.test(attr.name)) doc.documentElement.removeAttribute(attr.name)
   }
   const restore = () => {
     clearSettings()
     doc.getElementById(styleId)?.remove()
     doc.getElementById(preparingStyleId)?.remove()
-    doc.documentElement.removeAttribute('data-dsh-duo-preparing')
+    doc.documentElement.removeAttribute('data-dsh-chat-preparing')
     owned.forEach(attr => doc.querySelectorAll(`[${attr}]`).forEach(node => node.removeAttribute(attr)))
   }
   if (page.origin !== origin) { restore(); return empty('unsupported') }
   if (command.type === 'restore' || (command.type === 'snapshot' && command.showOriginal)) {
-    doc.dispatchEvent(new Event('dsh-duo-stop-adapting'))
+    doc.dispatchEvent(new Event('dsh-chat-stop-adapting'))
     restore()
     if (command.type === 'restore') return empty('unsupported')
   }
   // Own observer runs in the same DOM microtask checkpoint as the site's React
   // commit, before paint. No app globals or data stores cross the guest boundary.
-  if (!(command.type === 'snapshot' && command.showOriginal) && !doc.documentElement.hasAttribute('data-dsh-duo-observing') && doc.defaultView) {
-    doc.documentElement.setAttribute('data-dsh-duo-observing', '')
+  if (!(command.type === 'snapshot' && command.showOriginal) && !doc.documentElement.hasAttribute('data-dsh-chat-observing') && doc.defaultView) {
+    doc.documentElement.setAttribute('data-dsh-chat-observing', '')
     let queued = false
     const observer = new MutationObserver(() => {
       if (queued) return
       queued = true
       queueMicrotask(() => {
         queued = false
-        if (!doc.documentElement.hasAttribute('data-dsh-duo-observing')) return
+        if (!doc.documentElement.hasAttribute('data-dsh-chat-observing')) return
         adaptWebsiteNavigation(doc, doc.defaultView!.location, { type: 'snapshot', showOriginal: false })
       })
     })
     observer.observe(doc.body, {childList:true,subtree:true,characterData:true})
-    doc.addEventListener('dsh-duo-stop-adapting', () => {
-      observer.disconnect(); doc.documentElement.removeAttribute('data-dsh-duo-observing')
+    doc.addEventListener('dsh-chat-stop-adapting', () => {
+      observer.disconnect(); doc.documentElement.removeAttribute('data-dsh-chat-observing')
     }, {once:true})
   }
   if (/^\/sign_in\/?$/.test(page.pathname)) { restore(); return empty('sign-in') }
   // Login SPA commits can precede the host navigation event. Gate that guest
   // paint locally as well, then reveal only the adapted, dark page.
-  if (!(command.type==='snapshot' && command.showOriginal) && !doc.documentElement.hasAttribute('data-dsh-duo-dark-complete')) {
-    doc.documentElement.setAttribute('data-dsh-duo-preparing','')
+  if (!(command.type==='snapshot' && command.showOriginal) && !doc.documentElement.hasAttribute('data-dsh-chat-dark-complete')) {
+    doc.documentElement.setAttribute('data-dsh-chat-preparing','')
     if (!doc.getElementById(preparingStyleId)) {
       const style=doc.createElement('style'); style.id=preparingStyleId
-      style.textContent='html[data-dsh-duo-preparing] body{opacity:0!important}'
+      style.textContent='html[data-dsh-chat-preparing] body{opacity:0!important}'
       doc.head.append(style)
     }
   }
@@ -129,9 +129,9 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
           && buttons.length >= 2 && buttons.length <= 3 && el.querySelector('svg,img') && !el.textContent?.trim()
       })
       if (compact) {
-        const started = Number(compact.getAttribute('data-dsh-duo-expanding'))
+        const started = Number(compact.getAttribute('data-dsh-chat-expanding'))
         if (!started) {
-          compact.setAttribute('data-dsh-duo-expanding',String(Date.now()))
+          compact.setAttribute('data-dsh-chat-expanding',String(Date.now()))
           compact.querySelector<HTMLElement>('button,[role="button"]')?.click()
           return empty('loading')
         }
@@ -157,28 +157,28 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
     const r = img.getBoundingClientRect()
     return r.top > (doc.defaultView?.innerHeight ?? 600) * .75 && r.height <= 80
   }) ?? (track.hasAttribute(marker) ? avatars.at(-1) : undefined)
-  let profile = doc.querySelector<HTMLElement>('[data-dsh-duo-profile]') ?? avatar?.parentElement ?? null
+  let profile = doc.querySelector<HTMLElement>('[data-dsh-chat-profile]') ?? avatar?.parentElement ?? null
   for (let depth = 0; profile?.parentElement && depth < 3; depth++) {
     const p = profile.parentElement
     if (p === sidebar || p.querySelector('a[href]') || p.getBoundingClientRect().height > 100) break
     profile = p
   }
-  profile?.setAttribute('data-dsh-duo-profile','')
+  profile?.setAttribute('data-dsh-chat-profile','')
   const accountName = profile?.textContent?.trim().slice(0, 100) || null
   const exactControl = (root: Element, regex: RegExp) => [...root.querySelectorAll<HTMLElement>('button,[role="menuitem"],[role="option"],[role="button"],label,.ds-button,.ds-dropdown-menu-option,.ds-select-option,.ds-dropdown-menu div,.ds-dropdown-menu span,.ds-select-dropdown div')]
     .find(el => regex.test((el.textContent ?? '').trim()) || regex.test(el.getAttribute('aria-label') ?? ''))
   const settingsRoot = doc.documentElement
-  const requestAttr = 'data-dsh-duo-settings-request'
-  const phaseAttr = 'data-dsh-duo-settings-phase'
-  const deadlineAttr = 'data-dsh-duo-settings-deadline'
-  const errorAttr = 'data-dsh-duo-settings-error'
-  let settingsDialog = doc.querySelector<HTMLElement>('[data-dsh-duo-settings-dialog]')
+  const requestAttr = 'data-dsh-chat-settings-request'
+  const phaseAttr = 'data-dsh-chat-settings-phase'
+  const deadlineAttr = 'data-dsh-chat-settings-deadline'
+  const errorAttr = 'data-dsh-chat-settings-error'
+  let settingsDialog = doc.querySelector<HTMLElement>('[data-dsh-chat-settings-dialog]')
   if (!settingsDialog) {
     const general = exactControl(doc.body, /^(General|通用|通用设置|常规)$/i)
     let candidate = general?.parentElement
     for (let depth=0; candidate && candidate!==doc.body && depth<8; depth++,candidate=candidate.parentElement) {
       if (!candidate.querySelector('textarea,[contenteditable="true"]') && /Settings|设置/.test(candidate.textContent ?? '') && /Theme|主题|外观/.test(candidate.textContent ?? '') && /Language|语言/.test(candidate.textContent ?? '') && [...candidate.querySelectorAll<HTMLElement>('button,[role=button],.ds-button,.ds-icon-button')].some(el=>!el.textContent?.trim() && el.querySelector('svg'))) {
-        settingsDialog = candidate; candidate.setAttribute('data-dsh-duo-settings-dialog',''); break
+        settingsDialog = candidate; candidate.setAttribute('data-dsh-chat-settings-dialog',''); break
       }
     }
   }
@@ -207,8 +207,8 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
       return themeButtons.filter(other=>getComputedStyle(other).backgroundColor===color).length===1
     }) : undefined)
   const theme = selectedTheme?.textContent?.trim().slice(0,80) || null
-  if (language) settingsRoot.setAttribute('data-dsh-duo-language',language)
-  if (theme) settingsRoot.setAttribute('data-dsh-duo-theme',theme)
+  if (language) settingsRoot.setAttribute('data-dsh-chat-language',language)
+  if (theme) settingsRoot.setAttribute('data-dsh-chat-theme',theme)
   if (command.type === 'settings-open' || command.type === 'settings-read' || command.type === 'setting') {
     const request = command.type==='setting' ? `${command.key}:${command.value}` : command.type==='settings-open' ? 'open' : 'read'
     settingsRoot.setAttribute(requestAttr,request)
@@ -216,7 +216,7 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
     settingsRoot.removeAttribute(errorAttr)
     settingsRoot.setAttribute(deadlineAttr,String(Date.now()+12000))
   }
-  if (!(command.type==='snapshot' && command.showOriginal) && !settingsRoot.hasAttribute('data-dsh-duo-dark-complete') && !settingsRoot.hasAttribute(requestAttr)) {
+  if (!(command.type==='snapshot' && command.showOriginal) && !settingsRoot.hasAttribute('data-dsh-chat-dark-complete') && !settingsRoot.hasAttribute(requestAttr)) {
     settingsRoot.setAttribute(requestAttr,'theme:dark')
     settingsRoot.setAttribute(deadlineAttr,String(Date.now()+12000))
   }
@@ -225,7 +225,7 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
   const finish = (error?:string) => {
     settingsRoot.removeAttribute(requestAttr);settingsRoot.removeAttribute(phaseAttr);settingsRoot.removeAttribute(deadlineAttr)
     if (error) settingsRoot.setAttribute(errorAttr,error)
-    if (request==='theme:dark') settingsRoot.setAttribute('data-dsh-duo-dark-complete','')
+    if (request==='theme:dark') settingsRoot.setAttribute('data-dsh-chat-dark-complete','')
     if (request!=='open' && settingsDialog) {
       const close=[...settingsDialog.querySelectorAll<HTMLElement>('button,[role="button"],.ds-button,.ds-icon-button')].find(el=>!el.textContent?.trim() && (el.querySelector('svg') || el.getAttribute('aria-label')==='close'))
       if (close && !close.textContent?.trim()) close.click()
@@ -267,7 +267,7 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
       }
     }
   }
-  const settings = {language:settingsRoot.getAttribute('data-dsh-duo-language'),theme:settingsRoot.getAttribute('data-dsh-duo-theme'),error:settingsRoot.getAttribute(errorAttr),pending:settingsRoot.hasAttribute(requestAttr)}
+  const settings = {language:settingsRoot.getAttribute('data-dsh-chat-language'),theme:settingsRoot.getAttribute('data-dsh-chat-theme'),error:settingsRoot.getAttribute(errorAttr),pending:settingsRoot.hasAttribute(requestAttr)}
   const conversations: WebsiteConversation[] = []
   let group = '对话'
   const walker = doc.createTreeWalker(sidebar, 1 | 4, {
@@ -304,26 +304,26 @@ export function adaptWebsiteNavigation(doc: Document, page: Pick<Location, 'orig
     // Keep the inner navigation addressable after the track is hidden.
     sidebar.setAttribute(marker, '')
     if (content && layout) {
-      layout.setAttribute('data-dsh-duo-layout', '')
-      content.setAttribute('data-dsh-duo-content', '')
+      layout.setAttribute('data-dsh-chat-layout', '')
+      content.setAttribute('data-dsh-chat-content', '')
       for (const candidate of content.querySelectorAll<HTMLElement>('div,header')) {
         const r = candidate.getBoundingClientRect()
         if (r.top >= -1 && r.top <= 72 && r.height > 0 && r.height <= 80 && r.width <= 400
           && candidate.querySelectorAll('button,[role="button"]').length >= 2 && candidate.querySelectorAll('button,[role="button"]').length <= 3 && candidate.querySelector('svg,img')
-          && !candidate.querySelector('textarea,[contenteditable="true"]') && !candidate.textContent?.trim()) candidate.setAttribute('data-dsh-duo-web-chrome', '')
+          && !candidate.querySelector('textarea,[contenteditable="true"]') && !candidate.textContent?.trim()) candidate.setAttribute('data-dsh-chat-web-chrome', '')
       }
     }
     if (!doc.getElementById(styleId)) {
       const style = doc.createElement('style')
       style.id = styleId
-      style.textContent = `[${marker}],[data-dsh-duo-web-chrome]{display:none!important}
-        [data-dsh-duo-layout]{grid-template-columns:minmax(0,1fr)!important}
-        [data-dsh-duo-content]{margin-left:0!important;min-width:0!important;width:100%!important;max-width:none!important;flex:1 1 0%!important}`
+      style.textContent = `[${marker}],[data-dsh-chat-web-chrome]{display:none!important}
+        [data-dsh-chat-layout]{grid-template-columns:minmax(0,1fr)!important}
+        [data-dsh-chat-content]{margin-left:0!important;min-width:0!important;width:100%!important;max-width:none!important;flex:1 1 0%!important}`
       doc.head.append(style)
     }
   }
-  const ready=settingsRoot.hasAttribute('data-dsh-duo-dark-complete') || (command.type==='snapshot' && command.showOriginal)
-  if (ready) settingsRoot.removeAttribute('data-dsh-duo-preparing')
+  const ready=settingsRoot.hasAttribute('data-dsh-chat-dark-complete') || (command.type==='snapshot' && command.showOriginal)
+  if (ready) settingsRoot.removeAttribute('data-dsh-chat-preparing')
   return { status: ready ? 'ready' : 'loading', conversations, selectedHref: safeHref(page.pathname), canCreate: newChat !== null, error: null, accountName, settings }
 }
 
