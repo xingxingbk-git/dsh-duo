@@ -7,7 +7,7 @@ import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-br
 import { CHAT_PANEL, ModeController } from './core/mode.js'
 import { authorizationSchema, DUO_REMOTE_CONTRIBUTION } from './protocol.js'
 import type { AuthorizationState, DuoClientMetadata } from './protocol.js'
-import { DuoModeControl, DuoOverlayControl, DuoChatSidebar, DuoChatLeading, DuoChatPanel } from './ui.js'
+import { DuoBrandName, DuoBrandControl, DuoChatSidebar, DuoChatLeading, DuoChatPanel } from './ui.js'
 import type { DuoUIBridge, DuoViewState, DuoViewportRect } from './ui.js'
 import { DuoWebSurface } from './web-surface.js'
 
@@ -40,6 +40,7 @@ export function apply(ctx: Context): void {
   let connectionError: string | null = null
   let navigationAttempt = 0
   let viewport: DuoViewportRect | null = null
+  let brandAnchor: DuoViewportRect | null = null
   let bridge: DuoUIBridge
   let cached: DuoViewState
   const mode = new ModeController({
@@ -59,7 +60,7 @@ export function apply(ctx: Context): void {
     const state = mode.getSnapshot()
     if (!nativeBrowser) return '网页嵌入目前需要 DSH 桌面版 0.2.0-rc.2 的官方浏览器能力。'
     if (state.authorization.status === 'pending') return '正在确认 DSH 的 DeepSeek 账号授权。'
-    if (state.authorization.status === 'unauthorized') return '请先在 Harness 中登录并授权 DeepSeek 账号，再刷新授权。'
+    if (state.authorization.status === 'unauthorized') return '请先在 Harness 中登录并授权 DeepSeek 账号，确认后即可使用 CHAT。'
     if (state.authorization.status === 'unavailable') return '暂时无法确认 DSH 账号授权，请检查网络后刷新。'
     return '真实 DeepSeek 网页；网页登录与 DSH 授权分别处理。'
   }
@@ -70,7 +71,7 @@ export function apply(ctx: Context): void {
       mode: state.mode, modeEnabled: mode.canEnter(), authorizationStatus: state.authorization.status,
       availabilityMessage: availability(), accountLabel: state.authorization.status === 'authorized' ? 'DSH 账号已授权' : null,
       error: state.error ?? connectionError ?? (state.authorization.error ? 'DSH 账号状态刷新遇到网络或服务问题。' : null),
-      desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport,
+      desktopAvailable: Boolean(nativeBrowser), webLoading, webError, viewport, brandAnchor,
       accountStorageKey: state.authorization.status === 'authorized' && state.authorization.accountId
         ? `dsh-duo:website:${state.authorization.accountId}` : null,
       authorizationGeneration, websiteReloadRevision,
@@ -191,6 +192,10 @@ export function apply(ctx: Context): void {
       if (viewport?.left === next?.left && viewport?.top === next?.top && viewport?.width === next?.width && viewport?.height === next?.height) return
       viewport = next; publish()
     },
+    updateBrandAnchor: next => {
+      if (brandAnchor?.left === next?.left && brandAnchor?.top === next?.top && brandAnchor?.width === next?.width && brandAnchor?.height === next?.height) return
+      brandAnchor = next; publish()
+    },
     reportWebsiteState: (generation, state) => {
       if (disposed || generation !== authorizationGeneration) return
       webLoading = state.loading; webError = state.error; publish()
@@ -201,9 +206,9 @@ export function apply(ctx: Context): void {
   // The enclosing effect's final cleanup restores navigation before registered main keys disappear.
   ctx.effect(() => {
     ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: CHAT_PANEL, inject: () => ({ bridge }) }, DuoChatPanel))
-    ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'dsh-duo.mode', order: -100, inject: () => ({ bridge }) }, DuoModeControl))
+    ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -100, inject: () => ({ bridge }) }, DuoBrandName))
     ctx.slots.inject('shell.overlay', () => [
-      ctx.slots.register({ name: 'shell.overlay', id: 'dsh-duo.control', order: 100, inject: () => ({ bridge }) }, DuoOverlayControl),
+      ctx.slots.register({ name: 'shell.overlay', id: 'dsh-duo.brand-control', order: 100, inject: () => ({ bridge }) }, DuoBrandControl),
       ctx.slots.register({ name: 'shell.overlay', id: 'dsh-duo.website', order: 90, inject: () => ({ bridge, nativeBrowser }) }, DuoWebSurface),
     ])
     const stopMode = mode.subscribe(publish)

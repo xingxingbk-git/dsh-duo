@@ -35,8 +35,9 @@ DSH 账号授权仅控制插件模式门槛；网页内部账号由真实页面�
 `src/core/mode.ts` 集中管理授权门槛、mode 和原 `activePanelId`（包括 null）。Client 只调用公开 `layout.panelInfo.getSnapshot()/subscribe()` 和 `selectPanel()`；没有 Session/core 状态写入或盲目 close/open 右栏。
 
 - `main` 自有键 `dsh-duo.chat`。独立 main 按官方布局自然隐藏 Harness 右栏；退出先恢复原 panel，再 dispose Chat 覆盖项。
-- 原 Harness 保留；插件入口是 additive `sidebar.footer.action` 和 `shell.overlay`。CHAT 时才 shadow `sidebar` 与 macOS 折叠 `shell.leading`，离开后 dispose 恢复原 occupant。
-- `sidebar.brand.name` 的 aria-hidden/外层 New Session 与折叠契约仍不允许合格的交互切换器。用户已接受候选入口；不宣称品牌位已完成。
+- Harness侧栏/navigation原树保留；`sidebar.brand.name`仅替换装饰内容：官方DeepSeek字标（自有SVG视口裁掉HARNESS徽标）及自有锚点。实际按钮是官方additive `shell.overlay` 的独立组件，ref/ResizeObserver/IntersectionObserver只测自己的元素；不查改核心DOM，不复制/包装未导出的SidebarRoot。
+- 品牌owner的aria-hidden/外层New Session仍存在，交互层在该祖先外，提供按键与屏幕阅读器语义。rc.2品牌行24px且会裁剪，锚点为112×24px；完全可见才发布矩形，折叠/裁剪时隐藏，重新可见时恢复。底部和右下角旧入口已移除；正常授权无常驻刷新，故障时在顶部说明并重试。Mac实测通过，Web/Windows外层按钮及其他平台仍需实测。
+- CHAT时才shadow `sidebar` 与macOS折叠 `shell.leading`，离开后dispose恢复原occupant；自己的CHAT品牌区内置可交互选择器。
 - 原新建快捷键没有完整公开模式拦截，保留原行为。监听主面板离开 CHAT 后清理覆盖，不改写原导航选择；不能保证此路径原 Session 没有被新建动作替换。
 - 所有注册与 stream 都由 Cordis enclosing effect 管理，末尾清理先恢复 panel，再卸载贡献和 guest。完整 Desktop 卸载恢复还需真实验收。
 
@@ -68,8 +69,8 @@ Git 安装与预构建 tarball 是独立交付路径。仓库不提交 lib，Git
 
 ## 尚未成立的能力
 
-- 真实 Desktop 登录/验证码/发送、两端同网页账号历史一致性。
+- 实机官网已加载并显示既有网页登录状态的历史导航；首次登录/验证码/发送、两端同网页账号历史一致性仍未验收。
 - 官网内部登出自动切回、网页账号与 DSH 账号匹配、网页原生历史 API。
 - 卸载/授权变化时未发送网页草稿保留与官网流式取消；插件不能提取或调用这些内部能力。
 - 网站下载、设备权限、外部 OAuth 弹窗等受原生 Browser 固定策略限制；当前仅在同 guest 接受官方 Chat HTTPS popup。
-- 其他 DSH 版本、Web iframe 和最终品牌位置。上述不因 typecheck/build/mock 通过自动变成支持。
+- 其他DSH版本、Web iframe、Windows/Linux品牌入口实测及完整屏幕阅读器验收。Mac顶部品牌位置已通过本轮实机检查；剩余项不因typecheck/build/mock通过自动变成支持。

@@ -1,10 +1,11 @@
 /** Development fixture only. Never imported by either production plugin entry. */
 import { useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
+import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MainPanelId, PanelInfo, UsePanelInfo } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type { DesktopBrowserBridge, DesktopBrowserReservation } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 import { CHAT_PANEL, ModeController, type ModeAuthorization } from '../src/core/mode.js'
-import { DuoChatPanel, DuoChatSidebar, DuoModeControl, DuoOverlayControl, useDuo, type DuoUIBridge, type DuoViewState, type DuoViewportRect } from '../src/ui.js'
+import { DuoBrandName, DuoBrandControl, DuoChatPanel, DuoChatSidebar, useDuo, type DuoUIBridge, type DuoViewState, type DuoViewportRect } from '../src/ui.js'
 import { DuoWebSurface } from '../src/web-surface.js'
 
 const rootElement = document.getElementById('preview-root')!
@@ -23,6 +24,7 @@ let websiteReloadRevision = 0
 let webLoading = false
 let webError: string | null = null
 let viewport: DuoViewportRect | null = null
+let brandAnchor: DuoViewportRect | null = null
 let cached: DuoViewState
 let panelInfo: PanelInfo = { activePanelId: 'harness.original' as MainPanelId }
 
@@ -86,7 +88,7 @@ function publish(): void {
     mode: state.mode, modeEnabled: controller.canEnter(), authorizationStatus: state.authorization.status,
     availabilityMessage: authorized ? '开发模拟：DSH 账号授权有效，网页容器不联网。' : '开发模拟：请使用上方按钮确认 DSH 账号授权。',
     accountLabel: authorized ? `模拟账号 ${state.authorization.accountId}` : null,
-    error: state.error, desktopAvailable: true, webLoading, webError, viewport,
+    error: state.error ?? (state.authorization.error ? '开发模拟：授权检查失败，请重试。' : null), desktopAvailable: true, webLoading, webError, viewport, brandAnchor,
     accountStorageKey: authorized && state.authorization.accountId ? `preview:website:${state.authorization.accountId}` : null,
     authorizationGeneration, websiteReloadRevision,
   }
@@ -112,7 +114,10 @@ const bridge: DuoUIBridge = {
   getSnapshot: () => cached,
   subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
   selectMode: mode => { controller.select(mode) },
-  refreshAuthorization: sameAccountRefresh,
+  refreshAuthorization: () => {
+    if (controller.getSnapshot().authorization.status === 'authorized') sameAccountRefresh()
+    else authorize('A') // Explicit local fixture recovery; no real account call.
+  },
   manageAccount: () => { controller.select('harness') },
   toggleSidebar: () => layout.toggleSidebar(),
   attachViewport: element => { if (!element) { viewport = null; publish() } },
@@ -120,6 +125,10 @@ const bridge: DuoUIBridge = {
     if (viewport?.left === next?.left && viewport?.top === next?.top && viewport?.width === next?.width && viewport?.height === next?.height) return
     viewport = next
     publish()
+  },
+  updateBrandAnchor: next => {
+    if (brandAnchor?.left === next?.left && brandAnchor?.top === next?.top && brandAnchor?.width === next?.width && brandAnchor?.height === next?.height) return
+    brandAnchor = next; publish()
   },
   reloadWebsite: () => { websiteReloadRevision++; publish() },
   reportWebsiteState: (generation, state) => {
@@ -197,9 +206,10 @@ function Preview() {
     <style>{previewStyles}</style>
     <header className="preview-header">
       <h1>dsh-duo 开发预览 · 模拟环境，不是 DSH 实机验收</h1>
-      <p>复用插件实际 UI 和 ModeController；账号、布局和网页容器均为模拟，不连接 DeepSeek 官网。HARNESS 控件位置是临时候选。</p>
+      <p>复用插件实际 UI 和 ModeController；账号、布局和网页容器均为模拟，不连接 DeepSeek 官网。顶部品牌控件使用实际定位组件。</p>
       <div className="preview-actions" aria-label="开发模拟控制">
         <button type="button" onClick={() => acceptAuthorization({ status: 'pending', accountId: null, epoch: `preview-${++epochNumber}`, error: null })}>模拟授权待确认</button>
+        <button type="button" onClick={() => acceptAuthorization({ status: 'unavailable', accountId: null, epoch: `preview-${++epochNumber}`, error: 'fixture-unavailable' })}>模拟授权失败</button>
         <button type="button" onClick={() => authorize('A')}>模拟授权账号 A</button>
         <button type="button" onClick={sameAccountRefresh} disabled={state.authorizationStatus !== 'authorized'}>同账号授权刷新</button>
         <button type="button" onClick={() => acceptAuthorization({ status: 'unauthorized', accountId: null, epoch: `preview-${++epochNumber}`, error: null })}>模拟退出 DSH</button>
@@ -210,7 +220,8 @@ function Preview() {
       {/* Official AppFrame constrains this occupant inside a fixed-width grid column. */}
       <div className="preview-sidebar-owner" style={{ width: sidebarMounted && sidebarCollapsed ? 56 : 270 }}>
       {sidebarMounted ? <DuoChatSidebar {...slotProps} bridge={bridge} collapsed={sidebarCollapsed} width={sidebarCollapsed ? 56 : 270} /> : <aside className="preview-harness-sidebar" aria-label="原 Harness 模拟侧栏">
-        <h2>DeepSeek Harness</h2>
+        {/* Match rc.2's clipped 24px brand identity so visibility regressions are observable. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 24, marginTop: 18, marginBottom: 34, overflow: 'hidden' }} aria-hidden="true"><FishLogo size={24} /><DuoBrandName {...slotProps} bridge={bridge} /></div>
         <nav aria-label="原 Harness 模拟导航"><strong>原工作区</strong><span>原会话与文件面板</span><span>设置和账号</span></nav>
         <p>这是保留状态的 Harness 模拟框架。CHAT 中的导航由插件暂时替换，返回后恢复。</p>
         <div className="preview-ledger" aria-label="网页容器生命周期">
@@ -219,7 +230,6 @@ function Preview() {
           <span>创建 {counts.acquired} · 释放 {counts.released} · 当前 {activeLeases.size}</span>
           <ol>{ledger.slice(-5).map(item => <li key={item.sequence}>{item.action} <small>{item.lease}</small></li>)}</ol>
         </div>
-        <div className="preview-footer"><DuoModeControl {...slotProps} bridge={bridge} wide /></div>
       </aside>}
       </div>
       <main className="preview-main">
@@ -236,7 +246,7 @@ function Preview() {
         {chat && <DuoChatPanel {...slotProps} bridge={bridge} />}
       </main>
     </div>
-    <DuoOverlayControl {...slotProps} bridge={bridge} />
+    <DuoBrandControl {...slotProps} bridge={bridge} />
     <DuoWebSurface {...slotProps} bridge={bridge} nativeBrowser={nativeBrowser} />
   </div>
 }

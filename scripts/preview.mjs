@@ -14,17 +14,20 @@ const result = await build({
   format: 'esm', platform: 'browser', target: 'es2022', jsx: 'automatic',
   define: { 'process.env.NODE_ENV': JSON.stringify('development') },
   plugins: [{
-    name: 'preview-official-fish-only',
+    name: 'preview-official-brand',
     setup(plugin) {
       // Production uses DSH's shared baseline. Preview only needs its installed,
-      // unchanged FishLogo; loading the whole library would require unrelated UI deps.
+      // unchanged FishLogo/BrandWordmark; the whole library needs unrelated UI deps.
       plugin.onResolve({ filter: /^@deepseek-ai\/dsh-client-ui-primitives$/ }, () => ({ path: 'FishLogo', namespace: 'preview-official-fish' }))
       plugin.onLoad({ filter: /.*/, namespace: 'preview-official-fish' }, async () => {
         const source = await readFile(require.resolve('@deepseek-ai/dsh-client-ui-primitives'), 'utf8')
-        const begin = source.indexOf('//#region lib/types/FishLogo.js')
-        const end = source.indexOf('//#endregion', begin)
-        if (begin < 0 || end < 0) throw new Error('Installed rc.2 FishLogo region is unavailable; preview must be adapted explicitly.')
-        return { contents: `import { jsx } from 'react/jsx-runtime';\n${source.slice(begin, end)}\nexport { FishLogo };`, loader: 'js', resolveDir: root }
+        const regions = ['FishLogo', 'BrandWordmark'].map(name => {
+          const begin = source.indexOf(`//#region lib/types/${name}.js`)
+          const end = source.indexOf('//#endregion', begin)
+          if (begin < 0 || end < 0) throw new Error(`Installed rc.2 ${name} region is unavailable; preview must be adapted explicitly.`)
+          return source.slice(begin, end)
+        })
+        return { contents: `import { jsx, jsxs } from 'react/jsx-runtime';\n${regions.join('\n')}\nexport { FishLogo, BrandWordmark };`, loader: 'js', resolveDir: root }
       })
     },
   }],

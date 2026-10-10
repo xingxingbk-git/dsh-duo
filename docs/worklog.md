@@ -118,3 +118,17 @@
 - 当前设备实测：pnpm package:plugin和单lazy工厂/3共享baseline检查通过；14文件tarball SHA256 20bac1a168cdf9587cefecb4d4bc219ee687377f7e082379699cea65372abe19，经官方CLI更新desktop依赖（ignore-scripts），两个安装入口hash匹配。DSH自动重载后授权确认完成，CHAT按钮可用、HARNESS保持选中、pending消失；刷新结果保持；禁用控件撤回、重新启用再次正常确认，AX/截图直接验证。CLI peer泛化warning未妨碍真实加载。未退出账号、加载官网、发送消息或改其他插件。
 - 交接：实际文件/版本/根因/验证分层和下一步已同步handoff；完整官网、历史、CHAT中的退出/卸载、右栏/Session矩阵仍待用户验收。本轮代码与文档均未提交/推送，新设备尚不能取得这份上下文；用户自行验收和手动Git交付。
 - 结束检查：git diff --check通过；main/HEAD仍f6cf716，12个源码/测试/文档文件为未暂存修改，无新增提交或推送，构建产物未进入Git。
+
+## W013 · 2026-10-10 · T06/T12/T13 · 顶部品牌模式入口
+
+- 用户截图明确：去品牌后HARNESS徽标，将底部切换器移至顶部品牌区域，删除底部刷新及右下角浮动框；本轮按此替代W009临时footer/overlay入口。
+- 基线：35da7f0d787b9503739d2bddc10e0cecec748939，用户已手动交付W012；工作区干净，fetch后0/0。初次fetch因沙箱不能写FETCH_HEAD失败，读操作提升后成功。版本仍DSH0.2.0-rc.2/Node24.15.0/pnpm10.33.2，Cordis4.0.4/React18.3.1；单Agent，无并行委派。
+- 官方证据：固定SidebarRoot品牌在aria-hidden且Web/Windows外层New Session；brand.name owner允许自己的内容/宽度，shell.overlay公开支持独立交互层。计划用非交互字标/定位锚点和独立层按钮，实现视觉品牌位且保留Harness原树；不套用隐藏区域按钮，不读/改核心DOM或包装包内SidebarRoot。
+- 当前工作范围/验收见handoff；正常状态取消常驻刷新，故障状态保留可用的顶部重试，授权规则与原账号菜单保留。尚未完成真实Desktop验收；修改默认本地供用户验收与手动Git交付。
+- 实现：品牌name只放官方字标及自有锚点，独立shell.overlay按钮对齐自有ref矩形；CHAT品牌为自己的交互区。取消footer注册/右下角组件和正常常驻刷新，故障显示顶部重试；Host及账号门槛不改。官方BrandWordmark包含徽标，用自有SVG视口裁去并按比例缩放，不修改核心SVG。
+- 失败与修正：普通预览品牌行60px时通过，首次实机按钮缺失；28px锚点在官方24px裁剪行不满足0.99可见阈值。仅改锚点24px后实机出现，预览也改为24px裁剪以覆盖此条件。未直接猜改owner或放宽遮蔽判断。文档批量Python写入遇stdin编码错误，未写入任何文件，已改用apply_patch；web固定GitHub页Cache miss不算新成功证据。
+- 浏览器模拟：生产组件+ModeController，官网被CSP禁止；24px裁剪顶部可见，交互层无aria-hidden/外层button祖先；pending/失败disabled、顶部重试、Enter切CHAT、退出恢复并disabled通过，console 0 warnings/0 errors。账号/layout/lease仍fixture。
+- Mac实测：更新本地唯一hash包后自动重载，顶部白底Harness可见，底部/右下角旧控件消失。侧栏折叠隐藏展开恢复；鼠标与Shift-Tab/Enter切CHAT，官网现有登录状态与历史导航可见；未发送或存储私人历史信息。返回原会话及已关闭右栏；插件页禁用恢复原徽标，重新启用授权收敛且Harness选中。首次登录/验证码/发送/跨端历史、其他平台及完整恢复矩阵仍未验收。
+- 上下文：AGENTS/requirements/architecture/roadmap/references/handoff已更新当前阶段，W012用户手动提交状态与当前35da7f0基线已纠正，旧长验证记录以worklog历史引用保留；README仅调整用户功能与真实能力边界。无进行中分工，完成本阶段交还用户验收，不自动Git交付。
+- 最终验证：pnpm typecheck、test（23/23）、package:plugin通过；单lazy工厂/3共享baseline，14文件tarball。最终SHA256 `77a175008dd8a25151fd5abc4f934614f80bde2b6f07de5175e2ac8aff85e839`，唯一hash包经官方CLI安装，Host/Client逐一hash匹配build。最终AX再次确认顶部两个可用按钮、Harness选中；截图仅本地output/playwright/dsh-duo-brand-header.png。开发preview进程和Agent临时tab已关闭，DSH保持原会话/Harness；未stage/commit/push。
+- 结束Git检查：git diff --check通过，15个源码/测试/文档文件为未暂存修改；暂存区空，main/HEAD仍35da7f0，与origin/main为0/0。W013未跨设备同步，构建包/截图被Git排除，等待用户验收和手动交付。

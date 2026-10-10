@@ -169,7 +169,7 @@ test('published Cordis and Typert Host/Client bind strict methods and withdraw t
       })
       plugin.onLoad({ filter: /.*/, namespace: 'fixture' }, (args: { path: string }) => ({
         contents: args.path === './ui.js'
-          ? 'export const DuoModeControl=()=>null, DuoOverlayControl=()=>null, DuoChatSidebar=()=>null, DuoChatLeading=()=>null, DuoChatPanel=()=>null;'
+          ? 'export const DuoBrandName=()=>null, DuoBrandControl=()=>null, DuoChatSidebar=()=>null, DuoChatLeading=()=>null, DuoChatPanel=()=>null;'
           : 'export const DuoWebSurface=()=>null;', loader: 'js',
       }))
     } }],

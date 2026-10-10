@@ -32,7 +32,7 @@
 
 ## 固定版本 UI 证据
 
-- [0.2.0-rc.2 SidebarRoot](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/SidebarRoot.tsx#L223) — 品牌内容有 `aria-hidden` 祖先；Web/Windows 外层触发 New Session；独立 New Session 按钮不在 `sidebar.workspaces` 内；折叠时品牌名不显示。品牌位置仍是视觉目标，不能把这个 Slot 当作已验证的交互区域。
+- [0.2.0-rc.2 SidebarRoot](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/SidebarRoot.tsx#L223) — 品牌有 `aria-hidden` 祖先；Web/Windows外层触发New Session；独立New Session按钮不在 `sidebar.workspaces` 内；折叠时品牌名不显示。该Slot仍仅作装饰，W013以自有锚点+独立shell.overlay实现视觉品牌位置；Mac实测不等于Web/Windows外层点击行为已验收。
 - [0.2.0-rc.2 Sidebar 注册](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/index.ts) — 品牌、workspace、footer 和 panel list 等槽的声明及生命周期参考。
 - [0.2.0-rc.2 Layout 服务](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/service.ts) — `panelInfo`、主面板导航及布局服务契约；恢复原 panel ID 与盲目返回默认 Conversation 不同。
 - [Layout 包文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/ui-layout/README.md) 与 [Sidebar 包文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/ui-sidebar/README.md) — 了解当前设计；master 可能领先，涉及行为时用固定版本核查。
@@ -93,3 +93,11 @@
 - 2026-10-10授权pending核查：上述Gateway文档明确每个namespace是独立`remote.<namespace>`服务；Cordis4.0.4发布包`lib/types/registry.d.ts`的`Context.inject`定义说明按服务可用性加载/卸载回调。实际插件Context复现缺`remote.dshDuo`注入错误，root Context调用不触发此限制；生产Client回归已纳入server.test，没有live Inspect或凭据读取。
 - 本机 app.asar 只读元数据/公开 bundled main/preload 核对确实为 rc.2，存在上述 Browser 桥；没有修改安装包或读取用户会话。
 - 官网公开无凭据 HTTP HEAD 返回 429，浏览器抓取也受限。这不是 iframe CSP/XFO 的可靠证据，不能声称 Web iframe 可用；Desktop 路线依赖其公开顶层 guest，实际官网登录及聊天仍待实测。
+
+## W013品牌入口证据（2026-10-10）
+
+固定commit仍为 `639ed015397290b3745d163aafe02ffee4aa3f84`，无live Inspect。上述SidebarRoot及Sidebar注册源码、[固定Slots owner类型](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-slots/src/index.ts)证实品牌name允许自有宽度、祖先隐藏与24px裁剪，shell.overlay为独立交互扩展层；公开ui-sidebar/client不导出SidebarRoot。
+
+`@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2`发布包的BrandWordmark本身含DeepSeek文字和HARNESS徽标，includeMark=false只去掉鱼图。插件仅在自己渲染的SVG外套视口裁掉徽标，不选择/修改内置SVG。预览从已安装发布包取未改的FishLogo/BrandWordmark片段，不依赖临时提取副本。
+
+Mac真实DSH的AX/截图确认顶部按钮可达、鼠标及Shift-Tab/Enter可切换，折叠隐藏展开恢复，禁用恢复原徽标；官网页面在既有网页登录状态下显示历史导航，没有记录历史标题/URL或发送消息。其他平台、完整右栏矩阵与两端历史一致性仍待验收，见handoff/worklog。本轮web工具读取固定GitHub页面遇Cache miss；契约核查使用已取得的固定源码与发布包，不将抓取失败写成新成功证据。

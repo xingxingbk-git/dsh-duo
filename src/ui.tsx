@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useRef, useSyncExternalStore } from 'react'
-import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
+import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -29,6 +29,7 @@ export interface DuoViewState {
   readonly authorizationGeneration: number
   readonly websiteReloadRevision: number
   readonly viewport: DuoViewportRect | null
+  readonly brandAnchor: DuoViewportRect | null
 }
 
 export interface DuoUIBridge {
@@ -40,6 +41,7 @@ export interface DuoUIBridge {
   toggleSidebar(): void
   attachViewport(element: HTMLElement | null): void
   updateViewport(rect: DuoViewportRect | null): void
+  updateBrandAnchor(rect: DuoViewportRect | null): void
   reloadWebsite(): void
   reportWebsiteState(generation: number, state: { readonly loading: boolean; readonly error: string | null }): void
 }
@@ -61,6 +63,14 @@ function PanelIcon() {
   </svg>
 }
 
+/** rc.2's official wordmark includes its HARNESS badge in the SVG artwork.
+ * Crop only our own presentation to the DeepSeek lettering (x=26..128). */
+function DuoWordmark() {
+  return <svg className="dsh-duo-brand-wordmark" width="102" height="24" viewBox="0 0 102 24" aria-hidden="true">
+    <BrandWordmark includeMark={false} size={24} />
+  </svg>
+}
+
 export function DuoModeSelector({ bridge, state, compact = false }: DuoBridgeProps & {
   readonly state: DuoViewState
   readonly compact?: boolean
@@ -76,29 +86,63 @@ export function DuoModeSelector({ bridge, state, compact = false }: DuoBridgePro
   </div>
 }
 
-/** An additive candidate entrance: the shipped Harness sidebar stays untouched. */
-export function DuoModeControl({ bridge, wide }: PropsRuntime<'sidebar.footer.action'> & DuoBridgeProps) {
-  const state = useDuo(bridge)
-  return <div className="dsh-duo-footer-control">
+/** Decorative brand content only: this slot has an aria-hidden/New Session owner. */
+export function DuoBrandName({ bridge }: PropsRuntime<'sidebar.brand.name'> & DuoBridgeProps) {
+  const name = useRef<HTMLSpanElement>(null)
+  const anchor = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const element = anchor.current
+    const group = name.current
+    if (!element || !group) return
+    let visible = false
+    const measure = () => {
+      const rect = element.getBoundingClientRect()
+      bridge.updateBrandAnchor(visible && rect.width > 0 && rect.height > 0
+        ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null)
+    }
+    const resize = new ResizeObserver(measure)
+    resize.observe(group); resize.observe(element)
+    const intersection = new IntersectionObserver(entries => {
+      visible = entries.some(entry => entry.target === element && entry.isIntersecting && entry.intersectionRatio >= 0.99)
+      measure()
+    }, { threshold: [0, 0.99, 1] })
+    intersection.observe(element)
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, true)
+    return () => {
+      resize.disconnect(); intersection.disconnect()
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', measure, true)
+      bridge.updateBrandAnchor(null)
+    }
+  }, [bridge])
+  return <span ref={name} className="dsh-duo-brand-name">
     <DuoStyles />
-    <DuoModeSelector bridge={bridge} state={state} compact={!wide} />
-    {wide && !state.modeEnabled && <p className="dsh-duo-footnote">{state.availabilityMessage}</p>}
-    {wide && state.error && <p className="dsh-duo-footnote" role="status">{state.error}</p>}
-    {wide && state.authorizationStatus !== 'pending' && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>刷新 DSH 授权状态</button>}
-    {wide && state.authorizationStatus !== 'authorized' && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.manageAccount()}>管理 DeepSeek 账号</button>}
+    <DuoWordmark />
+    <span ref={anchor} className="dsh-duo-brand-anchor" />
+  </span>
+}
+
+function DuoAuthorizationNotice({ bridge, state }: DuoBridgeProps & { readonly state: DuoViewState }) {
+  if (!state.error) return null
+  return <div className="dsh-duo-authorization-notice" role="status">
+    <p>{state.error}</p>
+    <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>重试授权检查</button>
   </div>
 }
 
-/** Reachable even on platforms whose collapsed sidebar is fully hidden. */
-export function DuoOverlayControl({ bridge }: PropsRuntime<'shell.overlay'> & DuoBridgeProps) {
+/** The interactive surface is outside the brand slot's hidden/button ancestry. */
+export function DuoBrandControl({ bridge }: PropsRuntime<'shell.overlay'> & DuoBridgeProps) {
   const state = useDuo(bridge)
-  if (state.mode === 'chat') return null
-  return <aside className="dsh-duo-mode-overlay" aria-label="dsh-duo 模式选择">
+  const rect = state.brandAnchor
+  if (state.mode !== 'harness' || rect === null) return null
+  return <div className="dsh-duo-brand-control" aria-label="dsh-duo 模式选择" style={{
+    left: rect.left, top: rect.top, width: rect.width, height: rect.height,
+  }}>
     <DuoStyles />
     <DuoModeSelector bridge={bridge} state={state} />
-    {(state.error || !state.modeEnabled) && <span className="dsh-duo-overlay-status" role="status" title={state.error || state.availabilityMessage}>{state.error || (state.authorizationStatus === 'pending' ? '正在确认账号授权' : state.authorizationStatus === 'unavailable' ? '暂时无法确认账号授权' : state.authorizationStatus === 'authorized' ? 'CHAT 暂不可用' : '需要 DeepSeek 账号授权')}</span>}
-    {state.authorizationStatus !== 'pending' && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>刷新授权</button>}
-  </aside>
+    <DuoAuthorizationNotice bridge={bridge} state={state} />
+  </div>
 }
 
 /** CHAT's native shell controls. The actual website owns its own conversation navigation. */
@@ -107,7 +151,7 @@ export function DuoChatSidebar({ bridge, collapsed, width }: PropsRuntime<'sideb
   return <aside className={`dsh-duo-sidebar${collapsed ? ' dsh-duo-sidebar-collapsed' : ''}`} style={collapsed ? undefined : { width }} aria-label="CHAT 模式控制">
     <DuoStyles />
     <div className="dsh-duo-sidebar-chrome" data-window-drag><button type="button" className="dsh-duo-icon-button" onClick={() => bridge.toggleSidebar()} aria-label={collapsed ? '展开模式侧栏' : '收起模式侧栏'}><PanelIcon /></button></div>
-    <div className="dsh-duo-brand"><span className="dsh-duo-mark"><FishLogo size={24} /></span>{!collapsed && <DuoModeSelector bridge={bridge} state={state} />}</div>
+    <div className="dsh-duo-brand"><span className="dsh-duo-mark"><FishLogo size={24} /></span>{!collapsed && <><DuoWordmark /><div className="dsh-duo-brand-chat-control"><DuoModeSelector bridge={bridge} state={state} /><DuoAuthorizationNotice bridge={bridge} state={state} /></div></>}</div>
     {collapsed ? <DuoModeSelector bridge={bridge} state={state} compact /> : <div className="dsh-duo-website-intro">
       <span className="dsh-duo-caption">DEEPSEEK CHAT</span>
       <h2>你的官网对话</h2>
@@ -117,9 +161,7 @@ export function DuoChatSidebar({ bridge, collapsed, width }: PropsRuntime<'sideb
     </div>}
     <div className="dsh-duo-spacer" />
     {!collapsed && <p className="dsh-duo-footnote">网页退出状态暂不能由插件直接观察；官网自身控制聊天登录状态。</p>}
-    {!collapsed && state.error && <p className="dsh-duo-footnote" role="status">{state.error}</p>}
     <button type="button" className={collapsed ? 'dsh-duo-icon-button' : 'dsh-duo-account-button'} onClick={() => bridge.manageAccount()} title="返回 HARNESS 管理账号" aria-label="返回 HARNESS 管理 DeepSeek 账号">{collapsed ? '⚙' : <><span className="dsh-duo-avatar" aria-hidden="true">D</span><span><strong>{state.accountLabel || 'DeepSeek 账号'}</strong><small>DSH 账号与设置</small></span><span aria-hidden="true">↗</span></>}</button>
-    {!collapsed && <button type="button" className="dsh-duo-text-button" onClick={() => bridge.refreshAuthorization()}>刷新 DSH 授权状态</button>}
   </aside>
 }
 
